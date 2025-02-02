@@ -29,6 +29,12 @@ body {
 #canvaspane {
     cursor: default;
 }
+
+canvas {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
 </style>
 </head>
 <body>
@@ -105,8 +111,8 @@ const Enemy = function(scene, distance) {
 const Bullet = function(scene, rotationInRadians) {
     this.rotationInRadians = rotationInRadians;
     this.color = randomPastelColor();
-    this.radius = 10;
-    this.distance = this.radius * 5;
+    this.radius = 6;
+    this.distance = (scene.turret.radius * 2) + (this.radius * 2);
     this.speed = 0.25;
     this.active = true;
 
@@ -120,7 +126,7 @@ const Bullet = function(scene, rotationInRadians) {
         const positionAdjustment = new PolarPoint(this.distance, this.rotationInRadians);
         this.setPosition(this.x + positionAdjustment.getX(), this.y + positionAdjustment.getY());
         for (let i = scene.enemies.length; i--;) {
-            if (hasCollision(this, scene.enemies[i], this.radius)) {
+            if (hasCollision(this, scene.enemies[i], this.radius * 1.5)) {
                 scene.enemies[i].active = false;
                 scene.score++;
                 this.active = false;
