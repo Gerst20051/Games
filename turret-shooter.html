@@ -1,0 +1,268 @@
+<!--
+ ::::::::  :::::::::  ::::::::::     ::: ::::::::::: :::::::::: :::::::::       :::::::::  :::   :::                               
+:+:    :+: :+:    :+: :+:          :+: :+:   :+:     :+:        :+:    :+:      :+:    :+: :+:   :+: :+:                           
++:+        +:+    +:+ +:+         +:+   +:+  +:+     +:+        +:+    +:+      +:+    +:+  +:+ +:+                                
++#+        +#++:++#:  +#++:++#   +#++:++#++: +#+     +#++:++#   +#+    +:+      +#++:++#+    +#++:                                 
++#+        +#+    +#+ +#+        +#+     +#+ +#+     +#+        +#+    +#+      +#+    +#+    +#+                                  
+#+#    #+# #+#    #+# #+#        #+#     #+# #+#     #+#        #+#    #+#      #+#    #+#    #+#    #+#                           
+ ########  ###    ### ########## ###     ### ###     ########## #########       #########     ###                                  
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                   
+    :::     ::::    ::: :::::::::  :::::::::  :::::::::: :::       :::       ::::::::  :::::::::: :::::::::   :::::::: ::::::::::: 
+  :+: :+:   :+:+:   :+: :+:    :+: :+:    :+: :+:        :+:       :+:      :+:    :+: :+:        :+:    :+: :+:    :+:    :+:     
+ +:+   +:+  :+:+:+  +:+ +:+    +:+ +:+    +:+ +:+        +:+       +:+      +:+        +:+        +:+    +:+ +:+           +:+     
++#++:++#++: +#+ +:+ +#+ +#+    +:+ +#++:++#:  +#++:++#   +#+  +:+  +#+      :#:        +#++:++#   +#++:++#:  +#++:++#++    +#+     
++#+     +#+ +#+  +#+#+# +#+    +#+ +#+    +#+ +#+        +#+ +#+#+ +#+      +#+   +#+# +#+        +#+    +#+        +#+    +#+     
+#+#     #+# #+#   #+#+# #+#    #+# #+#    #+# #+#         #+#+# #+#+#       #+#    #+# #+#        #+#    #+# #+#    #+#    #+#     
+###     ### ###    #### #########  ###    ### ##########   ###   ###         ########  ########## ###    ###  ########     ###     
+-->
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Turret Shooter (via Canvas Engine)</title>
+<script src="canvasengine.js"></script>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#canvaspane {
+    cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="content">
+<div id="canvaspane">
+<canvas id="canvas1" width="100" height="100"></canvas>
+</div>
+</div>
+<script>
+const hasCollision = function(obj1, obj2, buffer = 0) {
+    const distance = dist(obj1.x, obj1.y, obj2.x, obj2.y);
+    return distance <= obj1.radius + obj2.radius + buffer;
+};
+
+const PolarPoint = function(distance, angle) {
+    this.angle = angle % TWO_PI;
+    this.distance = distance;
+
+    this.getX = function() {
+        return this.distance * cos(this.angle);
+    };
+
+    this.getY = function() {
+        return this.distance * sin(this.angle);
+    };
+};
+
+const Enemy = function(scene, distance) {
+    this.active = true;
+    this.radians = randomRadian();
+    this.startingDistance = distance;
+    this.distance = distance;
+    this.radius = 12;
+    this.speed = 3;
+
+    this.setPosition = function(newX, newY) {
+        this.x = newX;
+        this.y = newY;
+    };
+
+    this.setDestination = function(destX, destY) {
+        this.destX = destX;
+        this.destY = destY;
+        const positionAdjustment = new PolarPoint(this.distance, this.radians);
+        this.setPosition(this.destX + positionAdjustment.getX(), this.destY + positionAdjustment.getY());
+    };
+
+    this.run = function() {
+        this.distance -= this.speed * scene.level;
+        const positionAdjustment = new PolarPoint(this.distance, this.radians);
+        this.setPosition(this.destX + positionAdjustment.getX(), this.destY + positionAdjustment.getY());
+        if (this.distance > this.startingDistance * THREE_FOURTH) {
+            this.color = colors.green;
+        } else if (this.distance > this.startingDistance * TWO_FOURTH) {
+            this.color = colors.yellow;
+        } else if (this.distance > this.startingDistance * ONE_FOURTH) {
+            this.color = colors.orange;
+        } else if (this.distance > this.radius * 2) {
+            this.color = colors.red;
+        } else {
+            this.active = false;
+        }
+    };
+
+    this.draw = function() {
+        this.run();
+        if (!this.active) return;
+        fill(this.color);
+        stroke(this.color);
+        circle(this.x, this.y, this.radius);
+    };
+};
+
+const Bullet = function(scene, rotationInRadians) {
+    this.rotationInRadians = rotationInRadians;
+    this.color = randomPastelColor();
+    this.radius = 10;
+    this.distance = this.radius * 5;
+    this.speed = 0.25;
+    this.active = true;
+
+    this.setPosition = function(newX, newY) {
+        this.x = newX;
+        this.y = newY;
+    };
+
+    this.run = function() {
+        this.distance += this.speed * scene.level;
+        const positionAdjustment = new PolarPoint(this.distance, this.rotationInRadians);
+        this.setPosition(this.x + positionAdjustment.getX(), this.y + positionAdjustment.getY());
+        for (let i = scene.enemies.length; i--;) {
+            if (hasCollision(this, scene.enemies[i], this.radius)) {
+                scene.enemies[i].active = false;
+                scene.score++;
+                this.active = false;
+                break;
+            }
+        }
+    };
+
+    this.draw = function() {
+        this.run();
+        fill(this.color);
+        stroke(this.color);
+        circle(this.x, this.y, this.radius);
+    };
+};
+
+const Turret = function(scene) {
+    this.color = color(20, 163, 199); // dark cyan
+    this.radius = 20;
+    this.turretThickness = this.radius / 3;
+    this.bullets = [];
+
+    this.setPosition = function(newX, newY) {
+        this.x = newX;
+        this.y = newY;
+    };
+
+    this.shoot = function() {
+        const bullet = new Bullet(scene, this.calculateRotationRadians());
+        bullet.setPosition(this.x, this.y);
+        this.bullets.push(bullet);
+    };
+
+    this.calculateRotationRadians = function() {
+        if (isTouchEnabled && (this.lastTouch || numberOfTouches)) {
+            const lastTouch = last(touchesList);
+            this.lastTouch = lastTouch ? lastTouch : this.lastTouch;
+            return Math.atan2(this.lastTouch.pageY - this.y, this.lastTouch.pageX - this.x);
+        }
+        return Math.atan2(mouseY - this.y, mouseX - this.x);
+    };
+
+    this.run = function() {
+        filterArray(this.bullets, (bullet, index) => !bullet.active);
+    };
+
+    this.draw = function() {
+        this.run();
+        fill(this.color);
+        noStroke();
+        circle(this.x, this.y, this.radius);
+        stroke(this.color);
+        strokeWeight(this.turretThickness);
+        const lineEndCoordinates = new PolarPoint(this.radius * 1.5, this.calculateRotationRadians());
+        const originAdjustment = this.turretThickness / 2;
+        line(this.x - originAdjustment, this.y - originAdjustment, this.x + lineEndCoordinates.getX() - originAdjustment, this.y + lineEndCoordinates.getY() - originAdjustment);
+        this.bullets.forEach(bullet => bullet.draw());
+    };
+};
+
+const Scene = function() {
+    this.enemies = [];
+    this.spawnPercentageThreshold = 1;
+    this.level = 1;
+    this.score = 0;
+    this.scoreTextSize = 20;
+
+    this.init = function() {
+        this.turret = new Turret(this);
+        this.setSize();
+    };
+
+    this.setSize = function() {
+        this.turret.setPosition(maxWidth / 2, maxHeight / 2);
+        this.enemyDistance = dist(0, 0, maxWidth / 2, maxHeight / 2);
+    };
+
+    this.spawnEnemy = function() {
+        const enemy = new Enemy(this, this.enemyDistance);
+        enemy.setDestination(this.turret.x, this.turret.y);
+        this.enemies.push(enemy);
+    };
+
+    this.run = function() {
+        const numberOfEnemies = this.enemies.length;
+        filterArray(this.enemies, (enemy, index) => !enemy.active);
+        this.level = ceil(this.score / 10) || 1;
+        this.spawnPercentageThreshold = this.level;
+        if (randomPercentage(this.spawnPercentageThreshold)) {
+            this.spawnEnemy();
+        }
+    };
+
+    this.draw = function() {
+        this.run();
+        this.turret.draw();
+        this.enemies.forEach(enemy => enemy.draw());
+        textSize(this.scoreTextSize);
+        fill(255, 255, 255);
+        text(`Score: ${this.score}`, this.scoreTextSize, this.scoreTextSize * 2);
+        text(`Level: ${this.level}`, maxWidth - 100, this.scoreTextSize * 2);
+    };
+};
+
+const scene = new Scene();
+
+var setup = function() {
+    fullScreenCanvas();
+    scene.init();
+};
+
+var draw = function() {
+    background(colors.black);
+    scene.draw();
+};
+
+var mousePressed = function() {
+    scene.turret.shoot();
+};
+
+var windowResized = debounce(function () {
+    scene.setSize();
+}, 500);
+
+var orientationChanged = function () {
+    windowResized();
+};
+
+window.onload = function(){
+    window.canvas = new Canvas(document.getElementById('canvas1'));
+    window.ctx = canvas.ctx;
+    canvas.setup = window.setup;
+    canvas.draw = window.draw;
+    canvas.run();
+};
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-42786295-1');
+</script>
+</body>
+</html>

@@ -56,6 +56,7 @@ rsync -zarvh stratego.html droplet:www/games
 rsync -zarvh tictactoe.html droplet:www/games
 rsync -zarvh tiles.html droplet:www/games
 rsync -zarvh trianglesplitter.html droplet:www/games
+rsync -zarvh turret-shooter.html droplet:www/games
 rsync -zarvh wordsearch.html droplet:www/games
 
 # update all of the directory based games

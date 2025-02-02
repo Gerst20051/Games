@@ -138,6 +138,7 @@ var Bubble = function (x, y) {
     this.color = this.isBlue ? '#1d70c7' : '#fc4243';
 
     this.setSpeed = function (newSpeed) {
+        // TODO: update to use randomPercentage(3)
         var pivot = random(0, 100);
         if (pivot < 3) {
             this.speed = newSpeed;
@@ -145,6 +146,7 @@ var Bubble = function (x, y) {
     };
 
     this.setRadius = function (newRadius) {
+        // TODO: update to use randomPercentage(3)
         var pivot = random(0, 100);
         if (pivot < 3) {
             this.radius = newRadius;

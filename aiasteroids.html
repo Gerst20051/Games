@@ -172,6 +172,7 @@ Asteroid = function(x, y){
 	};
 
 	this.setSpeed = function(newSpeed){
+		// TODO: update to use randomPercentage(3)
 		var pivot = random(0, 100);
 		if (pivot < 3) {
 			this.speed = newSpeed;
@@ -183,6 +184,7 @@ Asteroid = function(x, y){
 	};
 
 	this.setRadius = function(newRadius){
+		// TODO: update to use randomPercentage(3)
 		var pivot = random(0, 100);
 		if (pivot < 3) {
 			this.radius = newRadius;

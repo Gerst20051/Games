@@ -302,6 +302,11 @@ var undef,
 	QUARTER_PI = Math.PI / 4,
 	DEG_TO_RAD = Math.PI / 180,
 	RAD_TO_DEG = 180 / Math.PI,
+	ONE_THIRD = 1 / 3,
+	TWO_THIRD = 2 / 3,
+	ONE_FOURTH = 1 / 4,
+	TWO_FOURTH = 2 / 4,
+	THREE_FOURTH = 3 / 4,
 	WHITESPACE = " \t\n\r\u000c\u00a0",
 	ARROW = "default",
 	CROSS = "crosshair",
@@ -710,14 +715,24 @@ cube3D = function(xPos, yPos, width, height, angle, cubePOV, cubeViewDistance, c
 random = function(low, high){ // generate a random number
 	return Math.floor(Math.random() * (high - low + 1)) + low;
 },
+randomPercentage = function(threshold){ // return a boolean based on a threshold and a random percentage between 0 and 100%
+	return random(0, 100) < threshold;
+},
 randomDouble = function(low, high){ // generate a random double
 	if (arguments.length === 0) {
 		return Math.random();
 	}
 	return Math.random() * (high - low) + low;
 },
+randomRadian = function(){ // generate a random radian from negative pi to positive pi
+	return randomDouble() * randomNegative() * PI;
+	// return randomDouble(-PI, PI);
+},
 randomBoolean = function(){ // generate a random boolean
 	return Math.random() < 0.5;
+},
+randomNegative = function(){ // randomly negate a value
+	return randomBoolean() ? 1 : -1;
 },
 randomElement = function(array){ // return a random element from an array or arguments
 	if (1 < arguments.length) {
@@ -736,6 +751,21 @@ first = function(array){ // return the first element in an array
 },
 last = function(array){ // return the last element in an array
 	return array[array.length - 1];
+},
+filterArray = function(array, condition){ // remove items from an array that satisfy a condition
+	for (let i = array.length; i--;) {
+		let shouldRemoveItem = false;
+		if (typeof condition === 'function') {
+			if (condition(array[i], i)) {
+				shouldRemoveItem = true;
+			}
+		} else if (array[i] === condition) {
+			shouldRemoveItem = true;
+		}
+		if (shouldRemoveItem) {
+			array.splice(i, 1);
+		}
+	}
 },
 min = function(array){ // return min element from an array or arguments
 	if (1 < arguments.length) {
@@ -806,6 +836,9 @@ tan = function(radians){ // take the tangent of an angle in radians
 },
 degreesToRadians = function(degrees){ // convert degrees into radians
 	return degrees * PI / 180;
+},
+radiansToDegrees = function(radians){ // convert radians into degrees
+	return radians * (180 / PI);
 },
 createCoordinate = function(x, y){ // convert x and y arguments into an object
 	return { x, y };

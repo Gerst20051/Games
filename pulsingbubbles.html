@@ -129,6 +129,7 @@ var Bubble = function (x, y) {
     this.angle = 0;
 
     this.setRadius = function (newRadius) {
+        // TODO: update to use randomPercentage(6)
         var pivot = random(0, 100);
         if (pivot < 6) {
             this.radius = newRadius;
