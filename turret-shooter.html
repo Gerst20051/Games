@@ -20,6 +20,7 @@
 <!DOCTYPE html><html><head><meta charset="utf-8">
 <title>Turret Shooter (via Canvas Engine)</title>
 <script src="canvasengine.js"></script>
+<script src="soundengine.js"></script>
 <style>
 body {
     margin: 0;
@@ -130,6 +131,7 @@ const Bullet = function(scene, rotationInRadians) {
                 scene.enemies[i].active = false;
                 scene.score++;
                 this.active = false;
+                sound(randomBoolean() ? 'explosion_enormous' : 'large_explosion');
                 break;
             }
         }
@@ -158,6 +160,19 @@ const Turret = function(scene) {
         const bullet = new Bullet(scene, this.calculateRotationRadians());
         bullet.setPosition(this.x, this.y);
         this.bullets.push(bullet);
+        const weaponSound = randomElement([
+            'cannon_blast',
+            'flakgun_shoot',
+            'gun_gunshot',
+            'gun_shotgun_1',
+            'gun_shotgun_2',
+            'lasergun_cannon',
+            'laserpulse_shot',
+            'laserpulse_weapon',
+            'shockrifle_shoot',
+        ]);
+        sound(weaponSound);
+        sound('gun_shell_drop');
     };
 
     this.calculateRotationRadians = function() {
