@@ -201,6 +201,7 @@ var mySoundEngine,
 			audio.callback && audio.callback();
 		}, false);
 		audio.src = url;
+		audio.load();
 		return audio;
 	};
 
