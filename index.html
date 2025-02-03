@@ -39,7 +39,7 @@ body {
 <body>
 <div id="content"></div>
 <script>
-// [$]> rsync -zarvh src/games/index.html droplet:www/games
+// [$]> rsync -zarvh index.html droplet:www/games
 
 function Game(name, hasEpilepsyWarning, notes) {
 	this.getHTML = function () {
@@ -59,7 +59,7 @@ function Game(name, hasEpilepsyWarning, notes) {
 	};
 }
 
-// [$]> find src/games -name '*.html' | sort
+// [$]> find . -name '*.html' | sort
 const games = [
 	new Game('aiasteroids'),
 	new Game('animatedrainbow', true),

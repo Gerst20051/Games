@@ -32,7 +32,11 @@ var Node,
 loadRoundGridsFile();
 
 function loadRoundGridsFile() {
-    const jsonPath = 'https://rawgit.com/Gerst20051/HnS-Wave/master/src/games/word-racer';
+    // https://rawgit.com/Gerst20051/Games/main/word-racer/round-grids.json
+    // 403 Forbidden
+    // RawGit will soon shut down and is no longer serving new repos.
+    // Please visit https://rawgit.com for more details.
+    const jsonPath = 'https://rawgit.com/Gerst20051/Games/main/word-racer';
     $.getJSON(`${jsonPath}/round-grids.json`).done(function (gridJSON) {
         grids = gridJSON;
     });

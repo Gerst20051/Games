@@ -17,7 +17,7 @@ rsync -zarvh imageengine.js droplet:www/games
 rsync -zarvh soundengine.js droplet:www/games
 
 # update the single file games
-# [$]> find games -type f -name '*.html' | sort
+# [$]> find . -type f -name '*.html' | sort
 
 rsync -zarvh aiasteroids.html droplet:www/games
 rsync -zarvh animatedrainbow.html droplet:www/games

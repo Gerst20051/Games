@@ -38,7 +38,7 @@ body {
 </div>
 </div>
 <script>
-// [$]> rsync -zarvh src/games/tiles.html droplet:www/games
+// [$]> rsync -zarvh tiles.html droplet:www/games
 // https://ggorlen.github.io
 // https://github.com/ggorlen/ggorlen.github.io/blob/5cb89ab09c4d7bb0348ba4de4c770cb53abb646a/index.html#L81-L127
 
@@ -64,7 +64,7 @@ const makeTilePattern = (w, h, shrink = 6, min = 6) => {
         res.push({ x, y, w, h, d });
       }
     }
-  }
+  };
   const res = [];
   r(0, 0, w, h);
   return res;

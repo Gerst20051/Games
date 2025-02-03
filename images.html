@@ -49,10 +49,8 @@ var doFullScreen = true,
 	images = getImageList(),
 	imageIndex = -1;
 
-// TODO: figure out why this isn't working on ios mobile safari
-
 // command to sync the images on the server with the local images directory
-// [$]> rsync -zarvh src/games/images/ droplet:www/games/images
+// [$]> rsync -zarvh images/ droplet:www/games/images
 
 function getImageList(){
 	var images = myImageEngine.imageCollections, imageList = [], collection;

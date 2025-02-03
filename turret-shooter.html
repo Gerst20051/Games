@@ -262,15 +262,15 @@ var mousePressed = function() {
     scene.turret.shoot();
 };
 
-var windowResized = debounce(function () {
+var windowResized = debounce(function() {
     scene.setSize();
 }, 500);
 
-var orientationChanged = function () {
+var orientationChanged = function() {
     windowResized();
 };
 
-window.onload = function(){
+window.onload = function() {
     window.canvas = new Canvas(document.getElementById('canvas1'));
     window.ctx = canvas.ctx;
     canvas.setup = window.setup;

@@ -135,7 +135,7 @@ var myImageEngine,
 			if (imageArray) {
 				image = this.getImageFromArray(imageArray);
 				if (image && image.canplay) {
-					this.playImage(audio, duration);
+					this.playImage(image, duration);
 					return image;
 				} else {
 					return this.loadAndPlayImage(imagename, duration);
@@ -145,14 +145,14 @@ var myImageEngine,
 	};
 
 	this.loadAndPlayImage = function(imagename, duration){
-		var imageArrayAndCollection = this.getImageArray(imagename, true), imageArray, audio;
+		var imageArrayAndCollection = this.getImageArray(imagename, true), imageArray, image;
 		if (imageArrayAndCollection && imageArrayAndCollection.length === 2 && imageArrayAndCollection[0]) {
 			imageArray = imageArrayAndCollection[0];
 			image = this.getImageFromArray(imageArray);
 			collection = imageArrayAndCollection[1];
 			if (image && image.canplay === false) {
-				image.callback = this.playImage.curry(audio, duration);
-				return audio;
+				image.callback = this.playImage.curry(image, duration);
+				return image;
 			} else {
 				imageArray[2] = this.loadImage(this.pathToImages + collection + '/' + imageArray.join(''));
 				imageArray[2].callback = this.playImage.curry(imageArray[2], duration);
