@@ -20,16 +20,27 @@ var myImageEngine,
 	this.pathToImages = 'images/';
 	this.imageCollections = {
 		'duckhunt': [
-			['background','.png'],
-			['crosshair','.png'],
-			['flare','.png'],
-			['ink_splatter','.png'],
-			['much_pain','.png'],
-			['turkey','.png']
+			['background', '.png'],
+			['crosshair', '.png'],
+			['flare', '.png'],
+			['ink_splatter', '.png'],
+			['much_pain', '.png'],
+			['turkey', '.png'],
+		],
+		'emeralds': [
+			['amethyst', '.png'],
+			['aquamarine', '.png'],
+			['clinohumite', '.png'],
+			['diamond', '.png'],
+			['emerald', '.png'],
+			['mystic-topaz', '.png'],
+			['peridot', '.png'],
+			['ruby', '.png'],
+			['sapphire', '.png'],
 		],
 		'main': [
-			['zombie','.png']
-		]
+			['zombie', '.png'],
+		],
 	};
 
 	this.init = function(){

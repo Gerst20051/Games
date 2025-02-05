@@ -23,6 +23,7 @@ rsync -zarvh aiasteroids.html droplet:www/games
 rsync -zarvh animatedrainbow.html droplet:www/games
 rsync -zarvh animatedrandomrainbow.html droplet:www/games
 rsync -zarvh breakout.html droplet:www/games
+rsync -zarvh candy-crush.html droplet:www/games
 rsync -zarvh canvasenginedemo.html droplet:www/games
 rsync -zarvh checkers.html droplet:www/games
 rsync -zarvh clock.html droplet:www/games

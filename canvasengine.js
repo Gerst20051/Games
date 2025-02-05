@@ -574,31 +574,35 @@ quad = function(x1, y1, x2, y2, x3, y3, x4, y4){ // draw any quadrilateral
 	paint();
 },
 image = function(img, sx, sy, swidth, sheight, x, y, width, height){ // display an image
-	var numArgs = arguments.length, image, drawImage;
+	var numArgs = arguments.length, imageObj, drawImage;
 	engage();
 
 	drawImage = function(){
 		if (numArgs === 3) {
 			// img, x, y
-			ctx.drawImage(image, sx, sy);
+			ctx.drawImage(imageObj, sx, sy);
 		} else if (numArgs === 5) {
 			// img, x, y, width, height
-			ctx.drawImage(image, sx, sy, swidth, sheight);
+			ctx.drawImage(imageObj, sx, sy, swidth, sheight);
 		} else if (numArgs === 7) {
-			ctx.drawImage(image, sx, sy, swidth, sheight, x, y, swidth, sheight);
+			ctx.drawImage(imageObj, sx, sy, swidth, sheight, x, y, swidth, sheight);
 		} else if (numArgs === 9) {
-			ctx.drawImage(image, sx, sy, swidth, sheight, x, y, width, height);
+			ctx.drawImage(imageObj, sx, sy, swidth, sheight, x, y, width, height);
 		}
 	};
 
 	if (typeof img === "string") {
 		if (numArgs === 3 || numArgs === 5 || numArgs === 7 || numArgs === 9) {
-			image = new Image();
-			image.src = img;
-			image.onload = drawImage;
+			imageObj = new Image();
+			imageObj.src = img;
+			if (imageObj.complete) {
+				drawImage();
+			} else {
+				imageObj.onload = drawImage;
+			}
 		}
 	} else {
-		image = img;
+		imageObj = img;
 		drawImage();
 	}
 },

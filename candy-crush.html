@@ -1,0 +1,186 @@
+<!--
+ ::::::::  :::::::::  ::::::::::     ::: ::::::::::: :::::::::: :::::::::       :::::::::  :::   :::                               
+:+:    :+: :+:    :+: :+:          :+: :+:   :+:     :+:        :+:    :+:      :+:    :+: :+:   :+: :+:                           
++:+        +:+    +:+ +:+         +:+   +:+  +:+     +:+        +:+    +:+      +:+    +:+  +:+ +:+                                
++#+        +#++:++#:  +#++:++#   +#++:++#++: +#+     +#++:++#   +#+    +:+      +#++:++#+    +#++:                                 
++#+        +#+    +#+ +#+        +#+     +#+ +#+     +#+        +#+    +#+      +#+    +#+    +#+                                  
+#+#    #+# #+#    #+# #+#        #+#     #+# #+#     #+#        #+#    #+#      #+#    #+#    #+#    #+#                           
+ ########  ###    ### ########## ###     ### ###     ########## #########       #########     ###                                  
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                   
+    :::     ::::    ::: :::::::::  :::::::::  :::::::::: :::       :::       ::::::::  :::::::::: :::::::::   :::::::: ::::::::::: 
+  :+: :+:   :+:+:   :+: :+:    :+: :+:    :+: :+:        :+:       :+:      :+:    :+: :+:        :+:    :+: :+:    :+:    :+:     
+ +:+   +:+  :+:+:+  +:+ +:+    +:+ +:+    +:+ +:+        +:+       +:+      +:+        +:+        +:+    +:+ +:+           +:+     
++#++:++#++: +#+ +:+ +#+ +#+    +:+ +#++:++#:  +#++:++#   +#+  +:+  +#+      :#:        +#++:++#   +#++:++#:  +#++:++#++    +#+     
++#+     +#+ +#+  +#+#+# +#+    +#+ +#+    +#+ +#+        +#+ +#+#+ +#+      +#+   +#+# +#+        +#+    +#+        +#+    +#+     
+#+#     #+# #+#   #+#+# #+#    #+# #+#    #+# #+#         #+#+# #+#+#       #+#    #+# #+#        #+#    #+# #+#    #+#    #+#     
+###     ### ###    #### #########  ###    ### ##########   ###   ###         ########  ########## ###    ###  ########     ###     
+-->
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Candy Crush (via Canvas Engine)</title>
+<script src="canvasengine.js"></script>
+<script src="soundengine.js"></script>
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+#canvaspane {
+    cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="content">
+<div id="canvaspane">
+<canvas id="canvas1" width="100" height="100"></canvas>
+</div>
+</div>
+<script>
+const grids = [
+    [
+        [ 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1 ],
+    ],
+    [
+        [ 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1 ],
+    ],
+    [
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+        [ 1, 1, 1, 1, 1, 1, 1, 1 ],
+    ],
+];
+
+class Block {
+    static types = [
+        'images/emeralds/amethyst.png',
+        'images/emeralds/aquamarine.png',
+        'images/emeralds/clinohumite.png',
+        'images/emeralds/diamond.png',
+        'images/emeralds/emerald.png',
+        'images/emeralds/mystic-topaz.png',
+        'images/emeralds/peridot.png',
+        'images/emeralds/ruby.png',
+        'images/emeralds/sapphire.png',
+    ];
+
+    constructor(board, index) {
+        this.board = board;
+        this.index = index;
+        this.computeCoordinates();
+        this.type = randomElement(Block.types);
+    }
+
+    computeCoordinates() {
+        const columnIndex = this.index % this.board.grid.length;
+        const rowIndex = floor(this.index / this.board.grid.length);
+        const blockXPos = this.board.blockDimensions * columnIndex;
+        const blockYPos = this.board.blockDimensions * rowIndex;
+        this.coordinates = {
+            x: blockXPos + this.board.offset.x,
+            y: blockYPos + this.board.offset.y,
+        };
+    }
+
+    draw() {
+        image(this.type, this.coordinates.x, this.coordinates.y, this.board.blockDimensions, this.board.blockDimensions);
+    }
+}
+
+class Board {
+    blocks = [];
+    gridIndex = 2;
+
+    constructor() {
+        this.grid = grids[this.gridIndex];
+        this.calculateDimensions();
+        this.buildBlocks();
+    }
+
+    calculateDimensions() {
+        const minBoardSize = min(maxHeight, maxWidth);
+        this.dimensions = {
+            height: minBoardSize,
+            width: minBoardSize,
+        };
+        this.offset = {
+            x: maxWidth > this.dimensions.width ? (maxWidth - this.dimensions.width) / 2 : 0,
+            y: maxHeight > this.dimensions.height ? (maxHeight - this.dimensions.height) / 2 : 0,
+        };
+        this.blockDimensions = this.dimensions.height / this.grid.length;
+    }
+
+    buildBlocks() {
+        const numberOfBlocks = this.grid.length * this.grid.length;
+        for (let i = 0; i < numberOfBlocks; i++) {
+            this.blocks.push(new Block(this, i));
+        }
+    }
+
+    draw() {
+        this.blocks.forEach(block => block.draw());
+    }
+}
+
+class Game {
+    constructor() {
+        this.board = new Board();
+    }
+
+    draw() {
+        background(colors.black);
+        this.board.draw();
+    }
+}
+
+function setup() {
+    window.game = new Game();
+    fullScreenCanvas();
+}
+
+function draw() {
+    window.game.draw();
+}
+
+window.onload = function() {
+    window.canvas = new Canvas(document.getElementById('canvas1'));
+    window.ctx = canvas.ctx;
+    canvas.setup = window.setup;
+    canvas.draw = window.draw;
+    canvas.run();
+};
+
+var windowResized = function() {
+    window.game.board.calculateDimensions();
+    window.game.board.blocks.forEach(block => block.computeCoordinates());
+};
+
+var orientationChanged = function() {
+    windowResized();
+};
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-42786295-1');
+</script>
+</body>
+</html>

@@ -1,3 +1,5 @@
+// TODO: build my own duck hunt game and delete this file
+
 $(document).ready(turkeyHunt);
 
  var nameT = "";
