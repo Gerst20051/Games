@@ -1,0 +1,507 @@
+<!--
+ ::::::::  :::::::::  ::::::::::     ::: ::::::::::: :::::::::: :::::::::       :::::::::  :::   :::                               
+:+:    :+: :+:    :+: :+:          :+: :+:   :+:     :+:        :+:    :+:      :+:    :+: :+:   :+: :+:                           
++:+        +:+    +:+ +:+         +:+   +:+  +:+     +:+        +:+    +:+      +:+    +:+  +:+ +:+                                
++#+        +#++:++#:  +#++:++#   +#++:++#++: +#+     +#++:++#   +#+    +:+      +#++:++#+    +#++:                                 
++#+        +#+    +#+ +#+        +#+     +#+ +#+     +#+        +#+    +#+      +#+    +#+    +#+                                  
+#+#    #+# #+#    #+# #+#        #+#     #+# #+#     #+#        #+#    #+#      #+#    #+#    #+#    #+#                           
+ ########  ###    ### ########## ###     ### ###     ########## #########       #########     ###                                  
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                   
+    :::     ::::    ::: :::::::::  :::::::::  :::::::::: :::       :::       ::::::::  :::::::::: :::::::::   :::::::: ::::::::::: 
+  :+: :+:   :+:+:   :+: :+:    :+: :+:    :+: :+:        :+:       :+:      :+:    :+: :+:        :+:    :+: :+:    :+:    :+:     
+ +:+   +:+  :+:+:+  +:+ +:+    +:+ +:+    +:+ +:+        +:+       +:+      +:+        +:+        +:+    +:+ +:+           +:+     
++#++:++#++: +#+ +:+ +#+ +#+    +:+ +#++:++#:  +#++:++#   +#+  +:+  +#+      :#:        +#++:++#   +#++:++#:  +#++:++#++    +#+     
++#+     +#+ +#+  +#+#+# +#+    +#+ +#+    +#+ +#+        +#+ +#+#+ +#+      +#+   +#+# +#+        +#+    +#+        +#+    +#+     
+#+#     #+# #+#   #+#+# #+#    #+# #+#    #+# #+#         #+#+# #+#+#       #+#    #+# #+#        #+#    #+# #+#    #+#    #+#     
+###     ### ###    #### #########  ###    ### ##########   ###   ###         ########  ########## ###    ###  ########     ###     
+-->
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Dungeon Explorer (via Canvas Engine)</title>
+<script src="canvasengine.js"></script>
+<style>
+body {
+	margin: 0;
+	padding: 0;
+}
+
+#canvaspane {
+	cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="content">
+<div id="canvaspane">
+<canvas id="canvas1" width="100" height="100"></canvas>
+</div>
+</div>
+<script>
+// Game constants
+var TILE_SIZE = 20;
+var MAP_WIDTH = 40;
+var MAP_HEIGHT = 30;
+
+// Tile types
+var TILE = {
+    WALL: 0,
+    FLOOR: 1,
+    DOOR: 2,
+    STAIRS_DOWN: 3,
+    STAIRS_UP: 4
+};
+
+// Game state
+var game = {
+    map: [],
+    rooms: [],
+    player: { x: 0, y: 0, health: 100, maxHealth: 100, level: 1, exp: 0 },
+    enemies: [],
+    items: [],
+    currentLevel: 1,
+    turnCount: 0,
+    gameRunning: true
+};
+
+// Map generation
+function generateDungeon() {
+    // Initialize map with walls
+    game.map = [];
+    for (var y = 0; y < MAP_HEIGHT; y++) {
+        game.map[y] = [];
+        for (var x = 0; x < MAP_WIDTH; x++) {
+            game.map[y][x] = TILE.WALL;
+        }
+    }
+
+    game.rooms = [];
+
+    // Generate 8-12 rooms
+    var roomCount = Math.floor(Math.random() * 5) + 8;
+
+    for (var i = 0; i < roomCount; i++) {
+        var room = generateRoom();
+        if (room && !roomOverlaps(room)) {
+            game.rooms.push(room);
+            carveRoom(room);
+        }
+    }
+
+    // Connect rooms with corridors
+    connectRooms();
+
+    // Place player in first room
+    if (game.rooms.length > 0) {
+        var firstRoom = game.rooms[0];
+        game.player.x = Math.floor(firstRoom.x + firstRoom.width / 2);
+        game.player.y = Math.floor(firstRoom.y + firstRoom.height / 2);
+    }
+
+    // Generate enemies and items
+    generateEnemies();
+    generateItems();
+}
+
+function generateRoom() {
+    var attempts = 0;
+    while (attempts < 100) {
+        var width = Math.floor(Math.random() * 8) + 4; // 4-11 wide
+        var height = Math.floor(Math.random() * 6) + 4; // 4-9 tall
+        var x = Math.floor(Math.random() * (MAP_WIDTH - width - 2)) + 1;
+        var y = Math.floor(Math.random() * (MAP_HEIGHT - height - 2)) + 1;
+
+        var room = { x: x, y: y, width: width, height: height };
+
+        if (!roomOverlaps(room)) {
+            return room;
+        }
+        attempts++;
+    }
+    return null;
+}
+
+function roomOverlaps(newRoom) {
+    for (var i = 0; i < game.rooms.length; i++) {
+        var room = game.rooms[i];
+        if (newRoom.x < room.x + room.width + 1 &&
+            newRoom.x + newRoom.width + 1 > room.x &&
+            newRoom.y < room.y + room.height + 1 &&
+            newRoom.y + newRoom.height + 1 > room.y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function carveRoom(room) {
+    for (var y = room.y; y < room.y + room.height; y++) {
+        for (var x = room.x; x < room.x + room.width; x++) {
+            game.map[y][x] = TILE.FLOOR;
+        }
+    }
+}
+
+function connectRooms() {
+    for (var i = 1; i < game.rooms.length; i++) {
+        var prevRoom = game.rooms[i - 1];
+        var currRoom = game.rooms[i];
+
+        var prevCenter = {
+            x: Math.floor(prevRoom.x + prevRoom.width / 2),
+            y: Math.floor(prevRoom.y + prevRoom.height / 2)
+        };
+        var currCenter = {
+            x: Math.floor(currRoom.x + currRoom.width / 2),
+            y: Math.floor(currRoom.y + currRoom.height / 2)
+        };
+
+        // Create L-shaped corridor
+        if (Math.random() < 0.5) {
+            // Horizontal first, then vertical
+            createHorizontalTunnel(prevCenter.x, currCenter.x, prevCenter.y);
+            createVerticalTunnel(prevCenter.y, currCenter.y, currCenter.x);
+        } else {
+            // Vertical first, then horizontal
+            createVerticalTunnel(prevCenter.y, currCenter.y, prevCenter.x);
+            createHorizontalTunnel(prevCenter.x, currCenter.x, currCenter.y);
+        }
+    }
+}
+
+function createHorizontalTunnel(x1, x2, y) {
+    var minX = Math.min(x1, x2);
+    var maxX = Math.max(x1, x2);
+    for (var x = minX; x <= maxX; x++) {
+        if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+            game.map[y][x] = TILE.FLOOR;
+        }
+    }
+}
+
+function createVerticalTunnel(y1, y2, x) {
+    var minY = Math.min(y1, y2);
+    var maxY = Math.max(y1, y2);
+    for (var y = minY; y <= maxY; y++) {
+        if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+            game.map[y][x] = TILE.FLOOR;
+        }
+    }
+}
+
+function generateEnemies() {
+    game.enemies = [];
+    var enemyCount = Math.floor(Math.random() * 8) + 5; // 5-12 enemies
+
+    for (var i = 0; i < enemyCount; i++) {
+        var room = game.rooms[Math.floor(Math.random() * game.rooms.length)];
+        var x = room.x + Math.floor(Math.random() * room.width);
+        var y = room.y + Math.floor(Math.random() * room.height);
+
+        // Don't spawn on player
+        if (x !== game.player.x || y !== game.player.y) {
+            game.enemies.push({
+                x: x,
+                y: y,
+                health: 20 + Math.floor(Math.random() * 20),
+                maxHealth: 40,
+                damage: 5 + Math.floor(Math.random() * 5),
+                type: Math.random() < 0.7 ? 'goblin' : 'orc'
+            });
+        }
+    }
+}
+
+function generateItems() {
+    game.items = [];
+    var itemCount = Math.floor(Math.random() * 6) + 3; // 3-8 items
+
+    for (var i = 0; i < itemCount; i++) {
+        var room = game.rooms[Math.floor(Math.random() * game.rooms.length)];
+        var x = room.x + Math.floor(Math.random() * room.width);
+        var y = room.y + Math.floor(Math.random() * room.height);
+
+        var itemType = Math.random();
+        var item = { x: x, y: y };
+
+        if (itemType < 0.4) {
+            item.type = 'health_potion';
+            item.name = 'Health Potion';
+            item.healing = 25;
+        } else if (itemType < 0.7) {
+            item.type = 'gold';
+            item.name = 'Gold';
+            item.value = Math.floor(Math.random() * 50) + 10;
+        } else {
+            item.type = 'weapon';
+            item.name = 'Magic Sword';
+            item.damage = Math.floor(Math.random() * 10) + 5;
+        }
+
+        game.items.push(item);
+    }
+}
+
+// Input handling
+function handleKeyPress(key) {
+    if (!game.gameRunning) return;
+
+    var newX = game.player.x;
+    var newY = game.player.y;
+    var moved = false;
+
+    switch (key) {
+        case 'ArrowUp':
+        case 'w':
+            newY--;
+            moved = true;
+            break;
+        case 'ArrowDown':
+        case 's':
+            newY++;
+            moved = true;
+            break;
+        case 'ArrowLeft':
+        case 'a':
+            newX--;
+            moved = true;
+            break;
+        case 'ArrowRight':
+        case 'd':
+            newX++;
+            moved = true;
+            break;
+        case 'r':
+            // Regenerate dungeon
+            generateDungeon();
+            return;
+    }
+
+    if (moved && isValidMove(newX, newY)) {
+        game.player.x = newX;
+        game.player.y = newY;
+
+        // Check for items
+        checkForItems();
+
+        // Check for combat
+        checkForCombat();
+
+        // Enemy turn
+        if (game.gameRunning) {
+            enemyTurn();
+        }
+
+        game.turnCount++;
+    }
+}
+
+function isValidMove(x, y) {
+    return x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT && game.map[y][x] !== TILE.WALL;
+}
+
+function checkForItems() {
+    for (var i = game.items.length - 1; i >= 0; i--) {
+        var item = game.items[i];
+        if (item.x === game.player.x && item.y === game.player.y) {
+            // Pick up item
+            if (item.type === 'health_potion') {
+                game.player.health = Math.min(game.player.maxHealth, game.player.health + item.healing);
+            } else if (item.type === 'gold') {
+                game.player.exp += item.value;
+                if (game.player.exp >= game.player.level * 100) {
+                    game.player.level++;
+                    game.player.maxHealth += 10;
+                    game.player.health = game.player.maxHealth;
+                }
+            }
+            game.items.splice(i, 1);
+        }
+    }
+}
+
+function checkForCombat() {
+    for (var i = 0; i < game.enemies.length; i++) {
+        var enemy = game.enemies[i];
+        if (enemy.x === game.player.x && enemy.y === game.player.y) {
+            // Combat!
+            var playerDamage = 10 + Math.floor(Math.random() * 10);
+            enemy.health -= playerDamage;
+
+            if (enemy.health <= 0) {
+                game.enemies.splice(i, 1);
+                game.player.exp += 15;
+                if (game.player.exp >= game.player.level * 100) {
+                    game.player.level++;
+                    game.player.maxHealth += 10;
+                    game.player.health = game.player.maxHealth;
+                }
+            } else {
+                // Enemy attacks back
+                var enemyDamage = enemy.damage + Math.floor(Math.random() * 5);
+                game.player.health -= enemyDamage;
+
+                if (game.player.health <= 0) {
+                    game.gameRunning = false;
+                }
+            }
+            break;
+        }
+    }
+}
+
+function enemyTurn() {
+    for (var i = 0; i < game.enemies.length; i++) {
+        var enemy = game.enemies[i];
+
+        // Simple AI: move towards player if in same room
+        var playerRoom = getRoomAt(game.player.x, game.player.y);
+        var enemyRoom = getRoomAt(enemy.x, enemy.y);
+
+        if (playerRoom === enemyRoom && playerRoom !== null) {
+            var dx = game.player.x - enemy.x;
+            var dy = game.player.y - enemy.y;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                enemy.x += dx > 0 ? 1 : -1;
+            } else {
+                enemy.y += dy > 0 ? 1 : -1;
+            }
+
+            // Make sure enemy doesn't move into walls
+            if (!isValidMove(enemy.x, enemy.y)) {
+                enemy.x = game.player.x - dx;
+                enemy.y = game.player.y - dy;
+            }
+        }
+    }
+}
+
+function getRoomAt(x, y) {
+    for (var i = 0; i < game.rooms.length; i++) {
+        var room = game.rooms[i];
+        if (x >= room.x && x < room.x + room.width &&
+            y >= room.y && y < room.y + room.height) {
+            return i;
+        }
+    }
+    return null;
+}
+
+var setup = function(){
+    size(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE + 100); // Extra space for UI
+    generateDungeon();
+
+    // Set up keyboard handling
+    document.addEventListener('keydown', function(e) {
+        handleKeyPress(e.key);
+        e.preventDefault();
+    });
+};
+
+var draw = function(){
+    background(0, 0, 0); // Black background
+
+    // Draw map
+    for (var y = 0; y < MAP_HEIGHT; y++) {
+        for (var x = 0; x < MAP_WIDTH; x++) {
+            var tile = game.map[y][x];
+            var screenX = x * TILE_SIZE;
+            var screenY = y * TILE_SIZE;
+
+            switch (tile) {
+                case TILE.WALL:
+                    fill(100, 100, 100); // Gray walls
+                    break;
+                case TILE.FLOOR:
+                    fill(200, 180, 140); // Light brown floor
+                    break;
+                case TILE.DOOR:
+                    fill(139, 69, 19); // Brown door
+                    break;
+            }
+
+            noStroke();
+            rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+        }
+    }
+
+    // Draw items
+    for (var i = 0; i < game.items.length; i++) {
+        var item = game.items[i];
+        var screenX = item.x * TILE_SIZE + TILE_SIZE / 4;
+        var screenY = item.y * TILE_SIZE + TILE_SIZE / 4;
+
+        if (item.type === 'health_potion') {
+            fill(255, 0, 0); // Red potion
+        } else if (item.type === 'gold') {
+            fill(255, 215, 0); // Gold
+        } else {
+            fill(192, 192, 192); // Silver weapon
+        }
+
+        noStroke();
+        ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
+    }
+
+    // Draw enemies
+    for (var i = 0; i < game.enemies.length; i++) {
+        var enemy = game.enemies[i];
+        var screenX = enemy.x * TILE_SIZE + TILE_SIZE / 4;
+        var screenY = enemy.y * TILE_SIZE + TILE_SIZE / 4;
+
+        if (enemy.type === 'goblin') {
+            fill(0, 150, 0); // Green goblin
+        } else {
+            fill(150, 0, 0); // Red orc
+        }
+
+        noStroke();
+        ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
+    }
+
+    // Draw player
+    var playerScreenX = game.player.x * TILE_SIZE + TILE_SIZE / 4;
+    var playerScreenY = game.player.y * TILE_SIZE + TILE_SIZE / 4;
+    fill(0, 0, 255); // Blue player
+    noStroke();
+    ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
+
+    // Draw UI
+    var uiY = MAP_HEIGHT * TILE_SIZE + 10;
+    fill(255, 255, 255); // White text
+    text("Health: " + game.player.health + "/" + game.player.maxHealth, 10, uiY);
+    text("Level: " + game.player.level, 150, uiY);
+    text("Exp: " + game.player.exp, 220, uiY);
+    text("Turn: " + game.turnCount, 300, uiY);
+
+    if (!game.gameRunning) {
+        fill(255, 0, 0);
+        text("GAME OVER! Press R to restart", 10, uiY + 20);
+    } else {
+        fill(200, 200, 200);
+        text("Use WASD or arrow keys to move. R to regenerate dungeon.", 10, uiY + 20);
+    }
+};
+
+var mouseClicked = function(){
+    // Optional: Add mouse interaction later
+};
+
+window.onload = function(){
+	window.canvas = new Canvas(document.getElementById("canvas1"));
+	window.ctx = canvas.ctx;
+	canvas.setup = window.setup;
+	canvas.draw = window.draw;
+	canvas.run();
+};
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-42786295-1');
+</script>
+</body>
+</html>
