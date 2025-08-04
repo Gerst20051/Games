@@ -141,11 +141,120 @@ class Board {
 class Game {
     constructor() {
         this.board = new Board();
+        this.dragState = {
+            isDragging: false,
+            startBlock: null,
+            currentBlock: null,
+            dragOffset: { x: 0, y: 0 }
+        };
+    }
+
+    getBlockAtPosition(x, y) {
+        for (let block of this.board.blocks) {
+            if (x >= block.coordinates.x &&
+                x <= block.coordinates.x + this.board.blockDimensions &&
+                y >= block.coordinates.y &&
+                y <= block.coordinates.y + this.board.blockDimensions
+            ) {
+                return block;
+            }
+        }
+        return null;
+    }
+
+    areBlocksAdjacent(block1, block2) {
+        if (!block1 || !block2) return false;
+
+        const col1 = block1.index % this.board.grid.length;
+        const row1 = floor(block1.index / this.board.grid.length);
+        const col2 = block2.index % this.board.grid.length;
+        const row2 = floor(block2.index / this.board.grid.length);
+
+        const colDiff = Math.abs(col1 - col2);
+        const rowDiff = Math.abs(row1 - row2);
+
+        return (colDiff === 1 && rowDiff === 0) || (colDiff === 0 && rowDiff === 1);
+    }
+
+    swapBlocks(block1, block2) {
+        if (!block1 || !block2) return;
+
+        const tempType = block1.type;
+        block1.type = block2.type;
+        block2.type = tempType;
+    }
+
+    startDrag(x, y) {
+        const block = this.getBlockAtPosition(x, y);
+        if (block) {
+            this.dragState.isDragging = true;
+            this.dragState.startBlock = block;
+            this.dragState.currentBlock = block;
+            this.dragState.dragOffset.x = x - block.coordinates.x;
+            this.dragState.dragOffset.y = y - block.coordinates.y;
+        }
+    }
+
+    updateDrag(x, y) {
+        if (!this.dragState.isDragging) return;
+
+        const block = this.getBlockAtPosition(x, y);
+        if (block && block !== this.dragState.startBlock) {
+            this.dragState.currentBlock = block;
+        }
+    }
+
+    endDrag() {
+        if (this.dragState.isDragging &&
+            this.dragState.startBlock &&
+            this.dragState.currentBlock &&
+            this.dragState.startBlock !== this.dragState.currentBlock
+        ) {
+            if (this.areBlocksAdjacent(this.dragState.startBlock, this.dragState.currentBlock)) {
+                this.swapBlocks(this.dragState.startBlock, this.dragState.currentBlock);
+            }
+        }
+
+        this.dragState = {
+            isDragging: false,
+            startBlock: null,
+            currentBlock: null,
+            dragOffset: { x: 0, y: 0 }
+        };
     }
 
     draw() {
         background(colors.black);
         this.board.draw();
+
+        // Draw drag feedback
+        if (this.dragState.isDragging && this.dragState.startBlock) {
+            // Highlight the dragged block
+            ctx.globalAlpha = 0.7;
+            ctx.fillStyle = colors.white;
+            ctx.fillRect(
+                this.dragState.startBlock.coordinates.x - 2,
+                this.dragState.startBlock.coordinates.y - 2,
+                this.board.blockDimensions + 4,
+                this.board.blockDimensions + 4
+            );
+            ctx.globalAlpha = 1.0;
+
+            // Highlight potential swap target
+            if (this.dragState.currentBlock &&
+                this.dragState.currentBlock !== this.dragState.startBlock &&
+                this.areBlocksAdjacent(this.dragState.startBlock, this.dragState.currentBlock)) {
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = colors.green;
+                ctx.fillRect(
+                    this.dragState.currentBlock.coordinates.x - 2,
+                    this.dragState.currentBlock.coordinates.y - 2,
+                    this.board.blockDimensions + 4,
+                    this.board.blockDimensions + 4
+                );
+                ctx.globalAlpha = 1.0;
+            }
+        }
     }
 }
 
@@ -156,6 +265,30 @@ function setup() {
 
 function draw() {
     window.game.draw();
+}
+
+function mousePressed() {
+    window.game.startDrag(mouseX, mouseY);
+}
+
+function mouseMoved() {
+    window.game.updateDrag(mouseX, mouseY);
+}
+
+function mouseReleased() {
+    window.game.endDrag();
+}
+
+function touchStart() {
+    window.game.startDrag(mouseX, mouseY);
+}
+
+function touchMoved() {
+    window.game.updateDrag(mouseX, mouseY);
+}
+
+function touchEnd() {
+    window.game.endDrag();
 }
 
 window.onload = function() {
