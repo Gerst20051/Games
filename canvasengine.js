@@ -374,11 +374,29 @@ c = {
 	pathOffsetX: 0,
 	pathOffsetY: 0
 },
+CARDINAL_DIRECTION = {
+	NORTH: 'NORTH',
+	EAST: 'EAST',
+	SOUTH: 'SOUTH',
+	WEST: 'WEST'
+},
+CARDINAL_DIRECTION_OPPOSITE = {
+	NORTH: 'SOUTH',
+	EAST: 'WEST',
+	SOUTH: 'NORTH',
+	WEST: 'EAST'
+},
 DIRECTION = {
 	LEFT: 'LEFT',
 	UP: 'UP',
 	RIGHT: 'RIGHT',
 	DOWN: 'DOWN'
+},
+DIRECTION_OPPOSITE = {
+	LEFT: 'RIGHT',
+	UP: 'DOWN',
+	RIGHT: 'LEFT',
+	DOWN: 'UP'
 },
 pmouseX = 0,
 pmouseY = 0,

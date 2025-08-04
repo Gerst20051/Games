@@ -322,6 +322,192 @@ class World {
         }
         return null;
     }
+
+    isNearEdge(playerX, playerY, buffer = 10) {
+        return {
+            [CARDINAL_DIRECTION.NORTH]: playerY <= buffer,
+            [CARDINAL_DIRECTION.SOUTH]: playerY >= this.height - buffer - 1,
+            [CARDINAL_DIRECTION.WEST]: playerX <= buffer,
+            [CARDINAL_DIRECTION.EAST]: playerX >= this.width - buffer - 1
+        };
+    }
+
+    expandWorld(direction, expansionSize = 40) {
+        let oldWidth = this.width;
+        let oldHeight = this.height;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        // Calculate new dimensions and offsets
+        switch (direction) {
+            case CARDINAL_DIRECTION.NORTH:
+                this.height += expansionSize;
+                offsetY = expansionSize;
+                WORLD_HEIGHT += expansionSize;
+                break;
+            case CARDINAL_DIRECTION.SOUTH:
+                this.height += expansionSize;
+                WORLD_HEIGHT += expansionSize;
+                break;
+            case CARDINAL_DIRECTION.WEST:
+                this.width += expansionSize;
+                offsetX = expansionSize;
+                WORLD_WIDTH += expansionSize;
+                break;
+            case CARDINAL_DIRECTION.EAST:
+                this.width += expansionSize;
+                WORLD_WIDTH += expansionSize;
+                break;
+        }
+
+        // Create new larger map
+        let newMap = [];
+        for (let y = 0; y < this.height; y++) {
+            newMap[y] = [];
+            for (let x = 0; x < this.width; x++) {
+                newMap[y][x] = TILE.WALL;
+            }
+        }
+
+        // Copy existing map to new position
+        for (let y = 0; y < oldHeight; y++) {
+            for (let x = 0; x < oldWidth; x++) {
+                newMap[y + offsetY][x + offsetX] = this.map[y][x];
+            }
+        }
+
+        // Update room positions if there's an offset
+        if (offsetX > 0 || offsetY > 0) {
+            for (let room of this.rooms) {
+                room.x += offsetX;
+                room.y += offsetY;
+            }
+        }
+
+        this.map = newMap;
+
+        // Generate new rooms in the expanded area
+        this.generateNewRoomsInArea(direction, expansionSize, offsetX, offsetY, oldWidth, oldHeight);
+
+        return { offsetX, offsetY };
+    }
+
+    generateNewRoomsInArea(direction, expansionSize, offsetX, offsetY, oldWidth, oldHeight) {
+        let newRoomArea = {};
+
+        // Define the area where new rooms should be generated
+        switch (direction) {
+            case CARDINAL_DIRECTION.NORTH:
+                newRoomArea = { x: 0, y: 0, width: this.width, height: expansionSize };
+                break;
+            case CARDINAL_DIRECTION.SOUTH:
+                newRoomArea = { x: 0, y: oldHeight + offsetY, width: this.width, height: expansionSize };
+                break;
+            case CARDINAL_DIRECTION.WEST:
+                newRoomArea = { x: 0, y: 0, width: expansionSize, height: this.height };
+                break;
+            case CARDINAL_DIRECTION.EAST:
+                newRoomArea = { x: oldWidth + offsetX, y: 0, width: expansionSize, height: this.height };
+                break;
+        }
+
+        // Generate new rooms in the expansion area
+        const roomCount = Math.floor(Math.random() * 6) + 8; // 8-13 new rooms
+        let newRooms = [];
+
+        for (let i = 0; i < roomCount; i++) {
+            const room = this.generateRoomInArea(newRoomArea);
+            if (room && !this.roomOverlaps(room)) {
+                this.rooms.push(room);
+                newRooms.push(room);
+                this.carveRoom(room);
+            }
+        }
+
+        // Connect new rooms to existing structure
+        this.connectNewRoomsToExisting(newRooms, direction);
+    }
+
+    generateRoomInArea(area) {
+        let attempts = 0;
+        while (attempts < 50) {
+            const width = Math.floor(Math.random() * 8) + 4;
+            const height = Math.floor(Math.random() * 6) + 4;
+            const x = Math.floor(Math.random() * (area.width - width - 2)) + area.x + 1;
+            const y = Math.floor(Math.random() * (area.height - height - 2)) + area.y + 1;
+            const room = { x, y, width, height };
+
+            // Make sure room is within bounds
+            if (x > 0 && y > 0 && x + width < this.width - 1 && y + height < this.height - 1) {
+                return room;
+            }
+            attempts++;
+        }
+        return null;
+    }
+
+    connectNewRoomsToExisting(newRooms, direction) {
+        if (newRooms.length === 0) return;
+
+        // Find the closest existing room to connect to
+        for (let newRoom of newRooms) {
+            let closestExistingRoom = null;
+            let minDistance = Infinity;
+
+            for (let existingRoom of this.rooms) {
+                // Skip if it's one of the new rooms
+                if (newRooms.includes(existingRoom)) continue;
+
+                const distance = Math.sqrt(Math.pow(newRoom.x - existingRoom.x, 2) + Math.pow(newRoom.y - existingRoom.y, 2));
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestExistingRoom = existingRoom;
+                }
+            }
+
+            // Connect new room to closest existing room
+            if (closestExistingRoom) {
+                const newCenter = {
+                    x: Math.floor(newRoom.x + newRoom.width / 2),
+                    y: Math.floor(newRoom.y + newRoom.height / 2)
+                };
+                const existingCenter = {
+                    x: Math.floor(closestExistingRoom.x + closestExistingRoom.width / 2),
+                    y: Math.floor(closestExistingRoom.y + closestExistingRoom.height / 2)
+                };
+
+                if (Math.random() < 0.5) {
+                    this.createHorizontalTunnel(newCenter.x, existingCenter.x, newCenter.y);
+                    this.createVerticalTunnel(newCenter.y, existingCenter.y, existingCenter.x);
+                } else {
+                    this.createVerticalTunnel(newCenter.y, existingCenter.y, newCenter.x);
+                    this.createHorizontalTunnel(newCenter.x, existingCenter.x, existingCenter.y);
+                }
+            }
+        }
+
+        // Connect new rooms to each other
+        for (let i = 1; i < newRooms.length; i++) {
+            const prevRoom = newRooms[i - 1];
+            const currRoom = newRooms[i];
+            const prevCenter = {
+                x: Math.floor(prevRoom.x + prevRoom.width / 2),
+                y: Math.floor(prevRoom.y + prevRoom.height / 2)
+            };
+            const currCenter = {
+                x: Math.floor(currRoom.x + currRoom.width / 2),
+                y: Math.floor(currRoom.y + currRoom.height / 2)
+            };
+            if (Math.random() < 0.5) {
+                this.createHorizontalTunnel(prevCenter.x, currCenter.x, prevCenter.y);
+                this.createVerticalTunnel(prevCenter.y, currCenter.y, currCenter.x);
+            } else {
+                this.createVerticalTunnel(prevCenter.y, currCenter.y, prevCenter.x);
+                this.createHorizontalTunnel(prevCenter.x, currCenter.x, currCenter.y);
+            }
+        }
+    }
 }
 
 class Game {
@@ -493,6 +679,7 @@ class Game {
             this.player.move(newX, newY);
             this.camera.follow(this.player);
 
+            this.checkAndExpandWorld();
             this.checkForItems();
             this.checkForCombat();
 
@@ -552,6 +739,97 @@ class Game {
         this.drawPlayer();
         this.drawUI();
         this.handleSwipe();
+    }
+
+    checkAndExpandWorld() {
+        const expansionBuffer = 15;
+        const edges = this.world.isNearEdge(this.player.x, this.player.y, expansionBuffer);
+        let expanded = false;
+        if (edges[CARDINAL_DIRECTION.NORTH]) {
+            const result = this.world.expandWorld(CARDINAL_DIRECTION.NORTH);
+            this.updateEntitiesAfterExpansion(result.offsetX, result.offsetY);
+            expanded = true;
+        } else if (edges[CARDINAL_DIRECTION.SOUTH]) {
+            const result = this.world.expandWorld(CARDINAL_DIRECTION.SOUTH);
+            this.updateEntitiesAfterExpansion(result.offsetX, result.offsetY);
+            expanded = true;
+        } else if (edges[CARDINAL_DIRECTION.WEST]) {
+            const result = this.world.expandWorld(CARDINAL_DIRECTION.WEST);
+            this.updateEntitiesAfterExpansion(result.offsetX, result.offsetY);
+            expanded = true;
+        } else if (edges[CARDINAL_DIRECTION.EAST]) {
+            const result = this.world.expandWorld(CARDINAL_DIRECTION.EAST);
+            this.updateEntitiesAfterExpansion(result.offsetX, result.offsetY);
+            expanded = true;
+        }
+        if (expanded) {
+            this.generateItemsInExpandedArea();
+            this.generateEnemiesInExpandedArea();
+        }
+    }
+
+    updateEntitiesAfterExpansion(offsetX, offsetY) {
+        // Update player position
+        if (offsetX > 0 || offsetY > 0) {
+            this.player.x += offsetX;
+            this.player.y += offsetY;
+            this.camera.follow(this.player);
+
+            // Update all existing items
+            for (let item of this.items) {
+                item.x += offsetX;
+                item.y += offsetY;
+            }
+
+            // Update all existing enemies
+            for (let enemy of this.enemies) {
+                enemy.x += offsetX;
+                enemy.y += offsetY;
+            }
+        }
+    }
+
+    generateItemsInExpandedArea() {
+        // Add a few more items when world expands
+        const newItemCount = Math.floor(Math.random() * 5) + 3; // 3-7 new items
+        for (let i = 0; i < newItemCount; i++) {
+            let x, y;
+            let attempts = 0;
+            do {
+                x = Math.floor(Math.random() * this.world.width);
+                y = Math.floor(Math.random() * this.world.height);
+                attempts++;
+            } while (!this.world.isValidMove(x, y) && attempts < 100);
+
+            if (this.world.isValidMove(x, y)) {
+                let type = 'health_potion';
+                if (Math.random() < 0.3) {
+                    type = 'gold';
+                } else if (Math.random() < 0.1) {
+                    type = 'weapon';
+                }
+                this.items.push(new Item(x, y, type));
+            }
+        }
+    }
+
+    generateEnemiesInExpandedArea() {
+        // Add a few more enemies when world expands
+        const newEnemyCount = Math.floor(Math.random() * 4) + 2; // 2-5 new enemies
+        for (let i = 0; i < newEnemyCount; i++) {
+            let x, y;
+            let attempts = 0;
+            do {
+                x = Math.floor(Math.random() * this.world.width);
+                y = Math.floor(Math.random() * this.world.height);
+                attempts++;
+            } while (!this.world.isValidMove(x, y) && attempts < 100);
+
+            if (this.world.isValidMove(x, y)) {
+                const type = Math.random() < 0.6 ? 'goblin' : 'orc';
+                this.enemies.push(new Enemy(x, y, type));
+            }
+        }
     }
 
     drawMap() {
