@@ -174,7 +174,7 @@ class Camera {
 
         return {
             x: worldX - this.x + screenCenterX,
-            y: worldY - this.y + screenCenterY
+            y: worldY - this.y + screenCenterY,
         };
     }
 
@@ -226,9 +226,7 @@ class World {
             const height = Math.floor(Math.random() * 6) + 4;
             const x = Math.floor(Math.random() * (this.width - width - 2)) + 1;
             const y = Math.floor(Math.random() * (this.height - height - 2)) + 1;
-
-            const room = { x: x, y: y, width: width, height: height };
-
+            const room = { x, y, width, height };
             if (!this.roomOverlaps(room)) {
                 return room;
             }
@@ -262,16 +260,14 @@ class World {
         for (let i = 1; i < this.rooms.length; i++) {
             const prevRoom = this.rooms[i - 1];
             const currRoom = this.rooms[i];
-
             const prevCenter = {
                 x: Math.floor(prevRoom.x + prevRoom.width / 2),
-                y: Math.floor(prevRoom.y + prevRoom.height / 2)
+                y: Math.floor(prevRoom.y + prevRoom.height / 2),
             };
             const currCenter = {
                 x: Math.floor(currRoom.x + currRoom.width / 2),
-                y: Math.floor(currRoom.y + currRoom.height / 2)
+                y: Math.floor(currRoom.y + currRoom.height / 2),
             };
-
             if (Math.random() < 0.5) {
                 this.createHorizontalTunnel(prevCenter.x, currCenter.x, prevCenter.y);
                 this.createVerticalTunnel(prevCenter.y, currCenter.y, currCenter.x);
@@ -316,8 +312,7 @@ class World {
     getRoomAt(x, y) {
         for (let i = 0; i < this.rooms.length; i++) {
             const room = this.rooms[i];
-            if (x >= room.x && x < room.x + room.width &&
-                y >= room.y && y < room.y + room.height) {
+            if (x >= room.x && x < room.x + room.width && y >= room.y && y < room.y + room.height) {
                 return i;
             }
         }
@@ -344,17 +339,35 @@ class Game {
 
     generateDungeon() {
         this.world.generate();
-
-        // Place player in first room
         if (this.world.rooms.length > 0) {
-            const firstRoom = this.world.rooms[0];
-            this.player.x = Math.floor(firstRoom.x + firstRoom.width / 2);
-            this.player.y = Math.floor(firstRoom.y + firstRoom.height / 2);
+            const centerRoom = this.findCenterMostRoom();
+            this.player.x = Math.floor(centerRoom.x + centerRoom.width / 2);
+            this.player.y = Math.floor(centerRoom.y + centerRoom.height / 2);
             this.camera.follow(this.player);
         }
-
         this.generateEnemies();
         this.generateItems();
+    }
+
+    findCenterMostRoom() {
+        const worldCenterX = WORLD_WIDTH / 2;
+        const worldCenterY = WORLD_HEIGHT / 2;
+
+        let closestRoom = this.world.rooms[0];
+        let minDistance = Infinity;
+
+        for (let i = 0; i < this.world.rooms.length; i++) {
+            const room = this.world.rooms[i];
+            const roomCenterX = room.x + room.width / 2;
+            const roomCenterY = room.y + room.height / 2;
+            const distance = Math.sqrt(Math.pow(roomCenterX - worldCenterX, 2) +  Math.pow(roomCenterY - worldCenterY, 2));
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestRoom = room;
+            }
+        }
+
+        return closestRoom;
     }
 
     generateEnemies() {
@@ -473,7 +486,6 @@ class Game {
             const enemy = this.enemies[i];
             if (enemy.x === this.player.x && enemy.y === this.player.y) {
                 const playerDamage = 10 + Math.floor(Math.random() * 10);
-
                 if (enemy.takeDamage(playerDamage)) {
                     this.enemies.splice(i, 1);
                     this.player.gainExp(15);
