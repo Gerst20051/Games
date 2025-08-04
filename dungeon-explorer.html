@@ -180,7 +180,7 @@ class Camera {
 
     isVisible(worldX, worldY) {
         const screen = this.worldToScreen(worldX, worldY);
-        return screen.x >= -1 && screen.x <= MAP_WIDTH && screen.y >= -1 && screen.y <= MAP_HEIGHT;
+        return screen.x >= 0 && screen.x < MAP_WIDTH && screen.y >= 0 && screen.y < MAP_HEIGHT;
     }
 }
 
@@ -544,6 +544,10 @@ class Game {
             if (!this.camera.isVisible(item.x, item.y)) continue;
 
             const screen = this.camera.worldToScreen(item.x, item.y);
+
+            // Additional safety check to ensure items stay within game grid
+            if (screen.x < 0 || screen.x >= MAP_WIDTH || screen.y < 0 || screen.y >= MAP_HEIGHT) continue;
+
             const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
             const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
 
@@ -566,6 +570,10 @@ class Game {
             if (!this.camera.isVisible(enemy.x, enemy.y)) continue;
 
             const screen = this.camera.worldToScreen(enemy.x, enemy.y);
+
+            // Additional safety check to ensure enemies stay within game grid
+            if (screen.x < 0 || screen.x >= MAP_WIDTH || screen.y < 0 || screen.y >= MAP_HEIGHT) continue;
+
             const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
             const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
 
