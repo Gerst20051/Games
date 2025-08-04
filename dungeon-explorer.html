@@ -50,380 +50,571 @@ const TILE = {
     WALL: 2,
 };
 
-const game = {
-    camera: { x: 0, y: 0 }, // Camera position in world coordinates
-    currentLevel: 1,
-    enemies: [],
-    gameRunning: true,
-    items: [],
-    map: [],
-    player: {
-		exp: 0,
-		health: 100,
-		level: 1,
-		maxHealth: 100,
-		x: 0,
-		y: 0,
-	},
-    rooms: [],
-    turnCount: 0,
-};
-
-// Map generation
-function generateDungeon() {
-    // Initialize world map with walls (double viewport size)
-    game.map = [];
-    for (let y = 0; y < WORLD_HEIGHT; y++) {
-        game.map[y] = [];
-        for (let x = 0; x < WORLD_WIDTH; x++) {
-            game.map[y][x] = TILE.WALL;
-        }
+class Player {
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+        this.health = 100;
+        this.maxHealth = 100;
+        this.level = 1;
+        this.exp = 0;
     }
 
-    game.rooms = [];
-
-    // Generate more rooms for the larger world (16-24 rooms)
-    const roomCount = Math.floor(Math.random() * 9) + 16;
-
-    for (let i = 0; i < roomCount; i++) {
-        const room = generateRoom();
-        if (room && !roomOverlaps(room)) {
-            game.rooms.push(room);
-            carveRoom(room);
-        }
+    move(newX, newY) {
+        this.x = newX;
+        this.y = newY;
     }
 
-    connectRooms();
-
-    // Place player in first room
-    if (game.rooms.length > 0) {
-        const firstRoom = game.rooms[0];
-        game.player.x = Math.floor(firstRoom.x + firstRoom.width / 2);
-        game.player.y = Math.floor(firstRoom.y + firstRoom.height / 2);
-
-        // Center camera on player
-        updateCamera();
+    takeDamage(damage) {
+        this.health -= damage;
+        return this.health <= 0;
     }
 
-    generateEnemies();
-    generateItems();
-}
-
-function generateRoom() {
-    let attempts = 0;
-    while (attempts < 100) {
-        const width = Math.floor(Math.random() * 8) + 4; // 4-11 wide
-        const height = Math.floor(Math.random() * 6) + 4; // 4-9 tall
-        const x = Math.floor(Math.random() * (WORLD_WIDTH - width - 2)) + 1;
-        const y = Math.floor(Math.random() * (WORLD_HEIGHT - height - 2)) + 1;
-        const room = { x: x, y: y, width: width, height: height };
-        if (!roomOverlaps(room)) {
-            return room;
-        }
-        attempts++;
+    heal(amount) {
+        this.health = Math.min(this.maxHealth, this.health + amount);
     }
-    return null;
-}
 
-function roomOverlaps(newRoom) {
-    for (let i = 0; i < game.rooms.length; i++) {
-        const room = game.rooms[i];
-        if (newRoom.x < room.x + room.width + 1 &&
-            newRoom.x + newRoom.width + 1 > room.x &&
-            newRoom.y < room.y + room.height + 1 &&
-            newRoom.y + newRoom.height + 1 > room.y) {
+    gainExp(amount) {
+        this.exp += amount;
+        if (this.exp >= this.level * 100) {
+            this.level++;
+            this.maxHealth += 10;
+            this.health = this.maxHealth;
             return true;
         }
-    }
-    return false;
-}
-
-function carveRoom(room) {
-    for (let y = room.y; y < room.y + room.height; y++) {
-        for (let x = room.x; x < room.x + room.width; x++) {
-            game.map[y][x] = TILE.FLOOR;
-        }
+        return false;
     }
 }
 
-function connectRooms() {
-    for (let i = 1; i < game.rooms.length; i++) {
-        const prevRoom = game.rooms[i - 1];
-        const currRoom = game.rooms[i];
+class Enemy {
+    constructor(x, y, type = 'goblin') {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.health = type === 'goblin' ? 20 + Math.floor(Math.random() * 20) : 30 + Math.floor(Math.random() * 20);
+        this.maxHealth = 40;
+        this.damage = 5 + Math.floor(Math.random() * 5);
+    }
 
-        const prevCenter = {
-            x: Math.floor(prevRoom.x + prevRoom.width / 2),
-            y: Math.floor(prevRoom.y + prevRoom.height / 2)
-        };
-        const currCenter = {
-            x: Math.floor(currRoom.x + currRoom.width / 2),
-            y: Math.floor(currRoom.y + currRoom.height / 2)
-        };
+    moveTowards(targetX, targetY, world) {
+        const dx = targetX - this.x;
+        const dy = targetY - this.y;
 
-        // Create L-shaped corridor
-        if (Math.random() < 0.5) {
-            // Horizontal first, then vertical
-            createHorizontalTunnel(prevCenter.x, currCenter.x, prevCenter.y);
-            createVerticalTunnel(prevCenter.y, currCenter.y, currCenter.x);
+        let newX = this.x;
+        let newY = this.y;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+            newX += dx > 0 ? 1 : -1;
         } else {
-            // Vertical first, then horizontal
-            createVerticalTunnel(prevCenter.y, currCenter.y, prevCenter.x);
-            createHorizontalTunnel(prevCenter.x, currCenter.x, currCenter.y);
-        }
-    }
-}
-
-function createHorizontalTunnel(x1, x2, y) {
-    const minX = Math.min(x1, x2);
-    const maxX = Math.max(x1, x2);
-    for (let x = minX; x <= maxX; x++) {
-        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
-            game.map[y][x] = TILE.FLOOR;
-        }
-    }
-}
-
-function createVerticalTunnel(y1, y2, x) {
-    const minY = Math.min(y1, y2);
-    const maxY = Math.max(y1, y2);
-    for (let y = minY; y <= maxY; y++) {
-        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
-            game.map[y][x] = TILE.FLOOR;
-        }
-    }
-}
-
-function generateEnemies() {
-    game.enemies = [];
-    const enemyCount = Math.floor(Math.random() * 16) + 10; // 10-25 enemies for larger world
-
-    for (let i = 0; i < enemyCount; i++) {
-        const room = game.rooms[Math.floor(Math.random() * game.rooms.length)];
-        const x = room.x + Math.floor(Math.random() * room.width);
-        const y = room.y + Math.floor(Math.random() * room.height);
-
-        // Don't spawn on player
-        if (x !== game.player.x || y !== game.player.y) {
-            game.enemies.push({
-                x: x,
-                y: y,
-                health: 20 + Math.floor(Math.random() * 20),
-                maxHealth: 40,
-                damage: 5 + Math.floor(Math.random() * 5),
-                type: Math.random() < 0.7 ? 'goblin' : 'orc'
-            });
-        }
-    }
-}
-
-function generateItems() {
-    game.items = [];
-    const itemCount = Math.floor(Math.random() * 12) + 6; // 6-17 items for larger world
-
-    for (let i = 0; i < itemCount; i++) {
-        const room = game.rooms[Math.floor(Math.random() * game.rooms.length)];
-        const x = room.x + Math.floor(Math.random() * room.width);
-        const y = room.y + Math.floor(Math.random() * room.height);
-
-        const itemType = Math.random();
-        const item = { x, y };
-
-        if (itemType < 0.4) {
-            item.type = 'health_potion';
-            item.name = 'Health Potion';
-            item.healing = 25;
-        } else if (itemType < 0.7) {
-            item.type = 'gold';
-            item.name = 'Gold';
-            item.value = Math.floor(Math.random() * 50) + 10;
-        } else {
-            item.type = 'weapon';
-            item.name = 'Magic Sword';
-            item.damage = Math.floor(Math.random() * 10) + 5;
+            newY += dy > 0 ? 1 : -1;
         }
 
-        game.items.push(item);
-    }
-}
-
-// Input handling
-function handleKeyPress(key) {
-    if (!game.gameRunning) return;
-
-    let newX = game.player.x;
-    let newY = game.player.y;
-    let moved = false;
-
-    switch (key) {
-        case 'ArrowUp':
-        case 'w':
-            newY--;
-            moved = true;
-            break;
-        case 'ArrowDown':
-        case 's':
-            newY++;
-            moved = true;
-            break;
-        case 'ArrowLeft':
-        case 'a':
-            newX--;
-            moved = true;
-            break;
-        case 'ArrowRight':
-        case 'd':
-            newX++;
-            moved = true;
-            break;
-        case 'r':
-            generateDungeon();
-            return;
-    }
-
-    if (moved && isValidMove(newX, newY)) {
-        game.player.x = newX;
-        game.player.y = newY;
-
-        // Update camera to follow player
-        updateCamera();
-
-        checkForItems();
-        checkForCombat();
-        if (game.gameRunning) {
-            enemyTurn();
+        if (world.isValidMove(newX, newY)) {
+            this.x = newX;
+            this.y = newY;
         }
-        game.turnCount++;
+    }
+
+    takeDamage(damage) {
+        this.health -= damage;
+        return this.health <= 0;
     }
 }
 
-function isValidMove(x, y) {
-    return x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT && game.map[y][x] !== TILE.WALL;
+class Item {
+    constructor(x, y, type = 'health_potion') {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+
+        switch (type) {
+            case 'health_potion':
+                this.name = 'Health Potion';
+                this.healing = 25;
+                break;
+            case 'gold':
+                this.name = 'Gold';
+                this.value = Math.floor(Math.random() * 50) + 10;
+                break;
+            case 'weapon':
+                this.name = 'Magic Sword';
+                this.damage = Math.floor(Math.random() * 10) + 5;
+                break;
+        }
+    }
+
+    use(player) {
+        switch (this.type) {
+            case 'health_potion':
+                player.heal(this.healing);
+                break;
+            case 'gold':
+                return player.gainExp(this.value);
+            case 'weapon':
+                return player.gainExp(this.damage);
+        }
+        return false;
+    }
 }
 
-function checkForItems() {
-    for (let i = game.items.length - 1; i >= 0; i--) {
-        const item = game.items[i];
-        if (item.x === game.player.x && item.y === game.player.y) {
+class Camera {
+    constructor() {
+        this.x = 0;
+        this.y = 0;
+    }
+
+    follow(target) {
+        this.x = target.x;
+        this.y = target.y;
+    }
+
+    worldToScreen(worldX, worldY) {
+        const screenCenterX = Math.floor(MAP_WIDTH / 2);
+        const screenCenterY = Math.floor(MAP_HEIGHT / 2);
+
+        return {
+            x: worldX - this.x + screenCenterX,
+            y: worldY - this.y + screenCenterY
+        };
+    }
+
+    isVisible(worldX, worldY) {
+        const screen = this.worldToScreen(worldX, worldY);
+        return screen.x >= -1 && screen.x <= MAP_WIDTH && screen.y >= -1 && screen.y <= MAP_HEIGHT;
+    }
+}
+
+class World {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.map = [];
+        this.rooms = [];
+    }
+
+    generate() {
+        // Initialize world map with walls
+        this.map = [];
+        for (let y = 0; y < this.height; y++) {
+            this.map[y] = [];
+            for (let x = 0; x < this.width; x++) {
+                this.map[y][x] = TILE.WALL;
+            }
+        }
+
+        this.rooms = [];
+
+        // Generate rooms
+        const roomCount = Math.floor(Math.random() * 9) + 16;
+
+        for (let i = 0; i < roomCount; i++) {
+            const room = this.generateRoom();
+            if (room && !this.roomOverlaps(room)) {
+                this.rooms.push(room);
+                this.carveRoom(room);
+            }
+        }
+
+        // Connect rooms with corridors
+        this.connectRooms();
+    }
+
+    generateRoom() {
+        let attempts = 0;
+        while (attempts < 100) {
+            const width = Math.floor(Math.random() * 8) + 4;
+            const height = Math.floor(Math.random() * 6) + 4;
+            const x = Math.floor(Math.random() * (this.width - width - 2)) + 1;
+            const y = Math.floor(Math.random() * (this.height - height - 2)) + 1;
+
+            const room = { x: x, y: y, width: width, height: height };
+
+            if (!this.roomOverlaps(room)) {
+                return room;
+            }
+            attempts++;
+        }
+        return null;
+    }
+
+    roomOverlaps(newRoom) {
+        for (let i = 0; i < this.rooms.length; i++) {
+            const room = this.rooms[i];
+            if (newRoom.x < room.x + room.width + 1 &&
+                newRoom.x + newRoom.width + 1 > room.x &&
+                newRoom.y < room.y + room.height + 1 &&
+                newRoom.y + newRoom.height + 1 > room.y) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    carveRoom(room) {
+        for (let y = room.y; y < room.y + room.height; y++) {
+            for (let x = room.x; x < room.x + room.width; x++) {
+                this.map[y][x] = TILE.FLOOR;
+            }
+        }
+    }
+
+    connectRooms() {
+        for (let i = 1; i < this.rooms.length; i++) {
+            const prevRoom = this.rooms[i - 1];
+            const currRoom = this.rooms[i];
+
+            const prevCenter = {
+                x: Math.floor(prevRoom.x + prevRoom.width / 2),
+                y: Math.floor(prevRoom.y + prevRoom.height / 2)
+            };
+            const currCenter = {
+                x: Math.floor(currRoom.x + currRoom.width / 2),
+                y: Math.floor(currRoom.y + currRoom.height / 2)
+            };
+
+            if (Math.random() < 0.5) {
+                this.createHorizontalTunnel(prevCenter.x, currCenter.x, prevCenter.y);
+                this.createVerticalTunnel(prevCenter.y, currCenter.y, currCenter.x);
+            } else {
+                this.createVerticalTunnel(prevCenter.y, currCenter.y, prevCenter.x);
+                this.createHorizontalTunnel(prevCenter.x, currCenter.x, currCenter.y);
+            }
+        }
+    }
+
+    createHorizontalTunnel(x1, x2, y) {
+        const minX = Math.min(x1, x2);
+        const maxX = Math.max(x1, x2);
+        for (let x = minX; x <= maxX; x++) {
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                this.map[y][x] = TILE.FLOOR;
+            }
+        }
+    }
+
+    createVerticalTunnel(y1, y2, x) {
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        for (let y = minY; y <= maxY; y++) {
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                this.map[y][x] = TILE.FLOOR;
+            }
+        }
+    }
+
+    isValidMove(x, y) {
+        return x >= 0 && x < this.width && y >= 0 && y < this.height && this.map[y][x] !== TILE.WALL;
+    }
+
+    getTileAt(x, y) {
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            return this.map[y][x];
+        }
+        return TILE.WALL;
+    }
+
+    getRoomAt(x, y) {
+        for (let i = 0; i < this.rooms.length; i++) {
+            const room = this.rooms[i];
+            if (x >= room.x && x < room.x + room.width &&
+                y >= room.y && y < room.y + room.height) {
+                return i;
+            }
+        }
+        return null;
+    }
+}
+
+class Game {
+    constructor() {
+        this.world = new World(WORLD_WIDTH, WORLD_HEIGHT);
+        this.player = new Player();
+        this.camera = new Camera();
+        this.enemies = [];
+        this.items = [];
+        this.currentLevel = 1;
+        this.turnCount = 0;
+        this.gameRunning = true;
+    }
+
+    init() {
+        this.generateDungeon();
+        this.setupEventListeners();
+    }
+
+    generateDungeon() {
+        this.world.generate();
+
+        // Place player in first room
+        if (this.world.rooms.length > 0) {
+            const firstRoom = this.world.rooms[0];
+            this.player.x = Math.floor(firstRoom.x + firstRoom.width / 2);
+            this.player.y = Math.floor(firstRoom.y + firstRoom.height / 2);
+            this.camera.follow(this.player);
+        }
+
+        this.generateEnemies();
+        this.generateItems();
+    }
+
+    generateEnemies() {
+        this.enemies = [];
+        const enemyCount = Math.floor(Math.random() * 16) + 10;
+
+        for (let i = 0; i < enemyCount; i++) {
+            const room = this.world.rooms[Math.floor(Math.random() * this.world.rooms.length)];
+            const x = room.x + Math.floor(Math.random() * room.width);
+            const y = room.y + Math.floor(Math.random() * room.height);
+
+            if (x !== this.player.x || y !== this.player.y) {
+                const type = Math.random() < 0.7 ? 'goblin' : 'orc';
+                this.enemies.push(new Enemy(x, y, type));
+            }
+        }
+    }
+
+    generateItems() {
+        this.items = [];
+        const itemCount = Math.floor(Math.random() * 12) + 6;
+
+        for (let i = 0; i < itemCount; i++) {
+            const room = this.world.rooms[Math.floor(Math.random() * this.world.rooms.length)];
+            const x = room.x + Math.floor(Math.random() * room.width);
+            const y = room.y + Math.floor(Math.random() * room.height);
+
+            const itemType = Math.random();
+            let type;
+            if (itemType < 0.4) {
+                type = 'health_potion';
+            } else if (itemType < 0.7) {
+                type = 'gold';
+            } else {
+                type = 'weapon';
+            }
+
+            this.items.push(new Item(x, y, type));
+        }
+    }
+
+    setupEventListeners() {
+        document.addEventListener('keydown', (e) => {
+            this.handleKeyPress(e.key);
+            e.preventDefault();
+        });
+
+        window.addEventListener('resize', () => {
+            setTimeout(() => {
+                calculateMapDimensions();
+                this.generateDungeon();
+            }, 100);
+        });
+    }
+
+    handleKeyPress(key) {
+        if (!this.gameRunning) return;
+
+        let newX = this.player.x;
+        let newY = this.player.y;
+        let moved = false;
+
+        switch (key) {
+            case 'ArrowUp':
+            case 'w':
+                newY--;
+                moved = true;
+                break;
+            case 'ArrowDown':
+            case 's':
+                newY++;
+                moved = true;
+                break;
+            case 'ArrowLeft':
+            case 'a':
+                newX--;
+                moved = true;
+                break;
+            case 'ArrowRight':
+            case 'd':
+                newX++;
+                moved = true;
+                break;
+            case 'r':
+                this.generateDungeon();
+                return;
+        }
+
+        if (moved && this.world.isValidMove(newX, newY)) {
+            this.player.move(newX, newY);
+            this.camera.follow(this.player);
+
+            this.checkForItems();
+            this.checkForCombat();
+
+            if (this.gameRunning) {
+                this.enemyTurn();
+            }
+
+            this.turnCount++;
+        }
+    }
+
+    checkForItems() {
+        for (let i = this.items.length - 1; i >= 0; i--) {
+            const item = this.items[i];
+            if (item.x === this.player.x && item.y === this.player.y) {
+                item.use(this.player);
+                this.items.splice(i, 1);
+            }
+        }
+    }
+
+    checkForCombat() {
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+            if (enemy.x === this.player.x && enemy.y === this.player.y) {
+                const playerDamage = 10 + Math.floor(Math.random() * 10);
+
+                if (enemy.takeDamage(playerDamage)) {
+                    this.enemies.splice(i, 1);
+                    this.player.gainExp(15);
+                } else {
+                    const enemyDamage = enemy.damage + Math.floor(Math.random() * 5);
+                    if (this.player.takeDamage(enemyDamage)) {
+                        this.gameRunning = false;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    enemyTurn() {
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
+
+            const playerRoom = this.world.getRoomAt(this.player.x, this.player.y);
+            const enemyRoom = this.world.getRoomAt(enemy.x, enemy.y);
+
+            if (playerRoom === enemyRoom && playerRoom !== null) {
+                enemy.moveTowards(this.player.x, this.player.y, this.world);
+            }
+        }
+    }
+
+    draw() {
+        background(0, 0, 0);
+
+        // Calculate visible world bounds
+        const viewCenterX = Math.floor(MAP_WIDTH / 2);
+        const viewCenterY = Math.floor(MAP_HEIGHT / 2);
+        const worldStartX = this.camera.x - viewCenterX - 1;
+        const worldStartY = this.camera.y - viewCenterY - 1;
+        const worldEndX = this.camera.x + viewCenterX + 1;
+        const worldEndY = this.camera.y + viewCenterY + 1;
+
+        // Draw map (only visible tiles)
+        for (let worldY = Math.max(0, worldStartY); worldY < Math.min(this.world.map.length, worldEndY); worldY++) {
+            for (let worldX = Math.max(0, worldStartX); worldX < Math.min(this.world.map[0].length, worldEndX); worldX++) {
+                const screen = this.camera.worldToScreen(worldX, worldY);
+
+                if (screen.x < -1 || screen.x >= MAP_WIDTH || screen.y < -1 || screen.y >= MAP_HEIGHT) continue;
+
+                const tile = this.world.map[worldY][worldX];
+                const screenX = screen.x * TILE_SIZE;
+                const screenY = screen.y * TILE_SIZE;
+
+                switch (tile) {
+                    case TILE.WALL:
+                        fill(100, 100, 100);
+                        break;
+                    case TILE.FLOOR:
+                        fill(200, 180, 140);
+                        break;
+                    case TILE.DOOR:
+                        fill(139, 69, 19);
+                        break;
+                }
+
+                noStroke();
+                rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+            }
+        }
+
+        // Draw items (only visible ones)
+        for (let i = 0; i < this.items.length; i++) {
+            const item = this.items[i];
+
+            if (!this.camera.isVisible(item.x, item.y)) continue;
+
+            const screen = this.camera.worldToScreen(item.x, item.y);
+            const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
+            const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
+
             if (item.type === 'health_potion') {
-                game.player.health = Math.min(game.player.maxHealth, game.player.health + item.healing);
+                fill(255, 0, 0);
             } else if (item.type === 'gold') {
-                game.player.exp += item.value;
-                if (game.player.exp >= game.player.level * 100) {
-                    game.player.level++;
-                    game.player.maxHealth += 10;
-                    game.player.health = game.player.maxHealth;
-                }
-            }
-            game.items.splice(i, 1);
-        }
-    }
-}
-
-function checkForCombat() {
-    for (let i = 0; i < game.enemies.length; i++) {
-        const enemy = game.enemies[i];
-        if (enemy.x === game.player.x && enemy.y === game.player.y) {
-            const playerDamage = 10 + Math.floor(Math.random() * 10);
-            enemy.health -= playerDamage;
-            if (enemy.health <= 0) {
-                game.enemies.splice(i, 1);
-                game.player.exp += 15;
-                if (game.player.exp >= game.player.level * 100) {
-                    game.player.level++;
-                    game.player.maxHealth += 10;
-                    game.player.health = game.player.maxHealth;
-                }
+                fill(255, 215, 0);
             } else {
-                const enemyDamage = enemy.damage + Math.floor(Math.random() * 5);
-                game.player.health -= enemyDamage;
-                if (game.player.health <= 0) {
-                    game.gameRunning = false;
-                }
+                fill(192, 192, 192);
             }
-            break;
+
+            noStroke();
+            ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
         }
-    }
-}
 
-function enemyTurn() {
-    for (let i = 0; i < game.enemies.length; i++) {
-        const enemy = game.enemies[i];
+        // Draw enemies (only visible ones)
+        for (let i = 0; i < this.enemies.length; i++) {
+            const enemy = this.enemies[i];
 
-        // Simple AI: move towards player if in same room
-        const playerRoom = getRoomAt(game.player.x, game.player.y);
-        const enemyRoom = getRoomAt(enemy.x, enemy.y);
+            if (!this.camera.isVisible(enemy.x, enemy.y)) continue;
 
-        if (playerRoom === enemyRoom && playerRoom !== null) {
-            const dx = game.player.x - enemy.x;
-            const dy = game.player.y - enemy.y;
+            const screen = this.camera.worldToScreen(enemy.x, enemy.y);
+            const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
+            const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
 
-            if (Math.abs(dx) > Math.abs(dy)) {
-                enemy.x += dx > 0 ? 1 : -1;
+            if (enemy.type === 'goblin') {
+                fill(0, 150, 0);
             } else {
-                enemy.y += dy > 0 ? 1 : -1;
+                fill(150, 0, 0);
             }
 
-            // Make sure enemy doesn't move into walls or out of bounds
-            if (!isValidMove(enemy.x, enemy.y)) {
-                // Revert the move
-                enemy.x = enemy.x - (dx > 0 ? 1 : -1);
-                enemy.y = enemy.y - (dy > 0 ? 1 : -1);
-            }
+            noStroke();
+            ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
+        }
+
+        // Draw player (always at screen center)
+        const playerCenterX = Math.floor(MAP_WIDTH / 2);
+        const playerCenterY = Math.floor(MAP_HEIGHT / 2);
+        const playerScreenX = playerCenterX * TILE_SIZE + TILE_SIZE / 2;
+        const playerScreenY = playerCenterY * TILE_SIZE + TILE_SIZE / 2;
+        fill(0, 0, 255);
+        noStroke();
+        ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
+
+        this.drawUI();
+    }
+
+    drawUI() {
+        const uiStartY = MAP_HEIGHT * TILE_SIZE + 30;
+        const fontSize = Math.max(12, Math.floor(TILE_SIZE * 0.6));
+        textSize(fontSize);
+
+        fill(255, 255, 255);
+        text('Health: ' + this.player.health + '/' + this.player.maxHealth, 10, uiStartY);
+        text('Level: ' + this.player.level, 150, uiStartY);
+        text('Exp: ' + this.player.exp, 220, uiStartY);
+        text('Turn: ' + this.turnCount, 320, uiStartY);
+        text('Pos: ' + this.player.x + ',' + this.player.y, 400, uiStartY);
+
+        if (!this.gameRunning) {
+            fill(255, 0, 0);
+            text('GAME OVER! Press R to restart', 10, uiStartY + fontSize + 10);
+        } else {
+            fill(200, 200, 200);
+            text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiStartY + fontSize + 10);
         }
     }
 }
-
-function getRoomAt(x, y) {
-    for (let i = 0; i < game.rooms.length; i++) {
-        const room = game.rooms[i];
-        if (x >= room.x && x < room.x + room.width &&
-            y >= room.y && y < room.y + room.height) {
-            return i;
-        }
-    }
-    return null;
-}
-
-// Camera system functions
-function updateCamera() {
-    // Center camera on player position
-    game.camera.x = game.player.x;
-    game.camera.y = game.player.y;
-}
-
-function worldToScreen(worldX, worldY) {
-    // Convert world coordinates to screen coordinates
-    const screenCenterX = Math.floor(MAP_WIDTH / 2);
-    const screenCenterY = Math.floor(MAP_HEIGHT / 2);
-
-    return {
-        x: worldX - game.camera.x + screenCenterX,
-        y: worldY - game.camera.y + screenCenterY
-    };
-}
-
-function isVisible(worldX, worldY) {
-    const screen = worldToScreen(worldX, worldY);
-    return screen.x >= -1 && screen.x <= MAP_WIDTH && screen.y >= -1 && screen.y <= MAP_HEIGHT;
-}
-
-var setup = function(){
-	fullScreenCanvas();
-    calculateMapDimensions();
-    generateDungeon();
-
-    document.addEventListener('keydown', function(e) {
-        handleKeyPress(e.key);
-        e.preventDefault();
-    });
-
-    window.addEventListener('resize', function() {
-        setTimeout(function() {
-            calculateMapDimensions();
-            generateDungeon();
-        }, 100);
-    });
-};
 
 function calculateMapDimensions() {
     // Reserve space for UI at the bottom
@@ -456,115 +647,19 @@ function calculateMapDimensions() {
     console.log(`Screen: ${maxWidth}x${maxHeight}, Tiles: ${TILE_SIZE}px, Viewport: ${MAP_WIDTH}x${MAP_HEIGHT}, World: ${WORLD_WIDTH}x${WORLD_HEIGHT}`);
 }
 
+let game;
+
+var setup = function(){
+    fullScreenCanvas();
+    calculateMapDimensions();
+
+    game = new Game();
+    game.init();
+};
+
 var draw = function(){
-    background(0, 0, 0);
-
-    // Calculate visible world bounds
-    const viewCenterX = Math.floor(MAP_WIDTH / 2);
-    const viewCenterY = Math.floor(MAP_HEIGHT / 2);
-    const worldStartX = game.camera.x - viewCenterX - 1;
-    const worldStartY = game.camera.y - viewCenterY - 1;
-    const worldEndX = game.camera.x + viewCenterX + 1;
-    const worldEndY = game.camera.y + viewCenterY + 1;
-
-    // Draw map (only visible tiles)
-    for (let worldY = Math.max(0, worldStartY); worldY < Math.min(game.map.length, worldEndY); worldY++) {
-        for (let worldX = Math.max(0, worldStartX); worldX < Math.min(game.map[0].length, worldEndX); worldX++) {
-            const screen = worldToScreen(worldX, worldY);
-
-            // Skip if off screen
-            if (screen.x < -1 || screen.x >= MAP_WIDTH || screen.y < -1 || screen.y >= MAP_HEIGHT) continue;
-
-            const tile = game.map[worldY][worldX];
-            const screenX = screen.x * TILE_SIZE;
-            const screenY = screen.y * TILE_SIZE;
-
-            switch (tile) {
-                case TILE.WALL:
-                    fill(100, 100, 100); // Gray walls
-                    break;
-                case TILE.FLOOR:
-                    fill(200, 180, 140); // Light brown floor
-                    break;
-                case TILE.DOOR:
-                    fill(139, 69, 19); // Brown door
-                    break;
-            }
-
-            noStroke();
-            rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-        }
-    }
-
-    // Draw items (only visible ones)
-    for (let i = 0; i < game.items.length; i++) {
-        const item = game.items[i];
-
-        if (!isVisible(item.x, item.y)) continue;
-
-        const screen = worldToScreen(item.x, item.y);
-        const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
-        const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
-
-        if (item.type === 'health_potion') {
-            fill(255, 0, 0); // Red potion
-        } else if (item.type === 'gold') {
-            fill(255, 215, 0); // Gold
-        } else {
-            fill(192, 192, 192); // Silver weapon
-        }
-
-        noStroke();
-        ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
-    }
-
-    // Draw enemies (only visible ones)
-    for (let i = 0; i < game.enemies.length; i++) {
-        const enemy = game.enemies[i];
-
-        if (!isVisible(enemy.x, enemy.y)) continue;
-
-        const screen = worldToScreen(enemy.x, enemy.y);
-        const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
-        const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
-
-        if (enemy.type === 'goblin') {
-            fill(0, 150, 0); // Green goblin
-        } else {
-            fill(150, 0, 0); // Red orc
-        }
-
-        noStroke();
-        ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
-    }
-
-    // Draw player (always at screen center)
-    const playerCenterX = Math.floor(MAP_WIDTH / 2);
-    const playerCenterY = Math.floor(MAP_HEIGHT / 2);
-    const playerScreenX = playerCenterX * TILE_SIZE + TILE_SIZE / 2;
-    const playerScreenY = playerCenterY * TILE_SIZE + TILE_SIZE / 2;
-    fill(0, 0, 255); // Blue player
-    noStroke();
-    ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
-
-    // Draw UI
-    const uiStartY = MAP_HEIGHT * TILE_SIZE + 30;
-    const fontSize = Math.max(12, Math.floor(TILE_SIZE * 0.6)); // Scale font with tile size
-    textSize(fontSize);
-
-    fill(255, 255, 255);
-    text('Health: ' + game.player.health + '/' + game.player.maxHealth, 10, uiStartY);
-    text('Level: ' + game.player.level, 150, uiStartY);
-    text('Exp: ' + game.player.exp, 220, uiStartY);
-    text('Turn: ' + game.turnCount, 320, uiStartY);
-    text('Pos: ' + game.player.x + ',' + game.player.y, 400, uiStartY);
-
-    if (!game.gameRunning) {
-        fill(255, 0, 0);
-        text('GAME OVER! Press R to restart', 10, uiStartY + fontSize + 10);
-    } else {
-        fill(200, 200, 200);
-        text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiStartY + fontSize + 10);
+    if (game) {
+        game.draw();
     }
 };
 
