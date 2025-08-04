@@ -38,35 +38,36 @@ body {
 </div>
 </div>
 <script>
-// Game constants - will be calculated dynamically
 let TILE_SIZE = 20;
 let MAP_WIDTH = 40;
 let MAP_HEIGHT = 30;
 
-// Tile types
 const TILE = {
-    WALL: 0,
+    DOOR: 0,
     FLOOR: 1,
-    DOOR: 2,
-    STAIRS_DOWN: 3,
-    STAIRS_UP: 4
+    WALL: 2,
 };
 
-// Game state
 const game = {
-    map: [],
-    rooms: [],
-    player: { x: 0, y: 0, health: 100, maxHealth: 100, level: 1, exp: 0 },
-    enemies: [],
-    items: [],
     currentLevel: 1,
+    enemies: [],
+    gameRunning: true,
+    items: [],
+    map: [],
+    player: {
+		exp: 0,
+		health: 100,
+		level: 1,
+		maxHealth: 100,
+		x: 0,
+		y: 0,
+	},
+    rooms: [],
     turnCount: 0,
-    gameRunning: true
 };
 
 // Map generation
 function generateDungeon() {
-    // Initialize map with walls
     game.map = [];
     for (let y = 0; y < MAP_HEIGHT; y++) {
         game.map[y] = [];
@@ -88,7 +89,6 @@ function generateDungeon() {
         }
     }
 
-    // Connect rooms with corridors
     connectRooms();
 
     // Place player in first room
@@ -98,7 +98,6 @@ function generateDungeon() {
         game.player.y = Math.floor(firstRoom.y + firstRoom.height / 2);
     }
 
-    // Generate enemies and items
     generateEnemies();
     generateItems();
 }
@@ -220,7 +219,7 @@ function generateItems() {
         const y = room.y + Math.floor(Math.random() * room.height);
 
         const itemType = Math.random();
-        const item = { x: x, y: y };
+        const item = { x, y };
 
         if (itemType < 0.4) {
             item.type = 'health_potion';
@@ -393,7 +392,7 @@ var setup = function(){
 
 function calculateMapDimensions() {
     // Reserve space for UI at the bottom
-    const uiHeight = 80; // Increased from 60 to 80 for more UI space
+    const uiHeight = 80;
     const availableHeight = maxHeight - uiHeight;
 
     // Calculate how many tiles can fit with a reasonable minimum size
@@ -487,11 +486,11 @@ var draw = function(){
     ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
 
     // Draw UI
-    const uiStartY = MAP_HEIGHT * TILE_SIZE + 20; // Increased from 10 to 20 pixels gap
+    const uiStartY = MAP_HEIGHT * TILE_SIZE + 30;
     const fontSize = Math.max(12, Math.floor(TILE_SIZE * 0.6)); // Scale font with tile size
     textSize(fontSize);
 
-    fill(255, 255, 255); // White text
+    fill(255, 255, 255);
     text('Health: ' + game.player.health + '/' + game.player.maxHealth, 10, uiStartY);
     text('Level: ' + game.player.level, 150, uiStartY);
     text('Exp: ' + game.player.exp, 220, uiStartY);
@@ -499,15 +498,11 @@ var draw = function(){
 
     if (!game.gameRunning) {
         fill(255, 0, 0);
-        text('GAME OVER! Press R to restart', 10, uiStartY + fontSize + 10); // Increased gap from 5 to 10
+        text('GAME OVER! Press R to restart', 10, uiStartY + fontSize + 10);
     } else {
         fill(200, 200, 200);
-        text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiStartY + fontSize + 10); // Increased gap from 5 to 10
+        text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiStartY + fontSize + 10);
     }
-};
-
-var mouseClicked = function(){
-    // Optional: Add mouse interaction later
 };
 
 window.onload = function(){
