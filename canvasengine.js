@@ -374,6 +374,12 @@ c = {
 	pathOffsetX: 0,
 	pathOffsetY: 0
 },
+DIRECTION = {
+	LEFT: 'LEFT',
+	UP: 'UP',
+	RIGHT: 'RIGHT',
+	DOWN: 'DOWN'
+},
 pmouseX = 0,
 pmouseY = 0,
 mouseX = 0,
@@ -381,8 +387,13 @@ mouseY = 0,
 mouseIsPressed = false,
 screenIsTouched = false,
 numberOfTouches = 0,
+initialTouchX = 0,
+initialTouchY = 0,
+finalTouchX = 0,
+finalTouchY = 0,
 touchesList = [],
 activeMousePath = [],
+swipeDirection = null,
 keyCode = 0,
 keyIsPressed = false,
 keyCodeList = [],
@@ -1212,6 +1223,34 @@ var onMouseClicked = function(e){
 	mouseClicked(e);
 };
 
+var calculateSwipeDirection = function(){
+	if (initialTouchX > finalTouchX) {
+		swipeDirection = DIRECTION.LEFT;
+		if (abs(initialTouchX - finalTouchX) < abs(initialTouchY - finalTouchY)) {
+			if (initialTouchY > finalTouchY) {
+				swipeDirection = DIRECTION.UP;
+			} else if (initialTouchY < finalTouchY) {
+				swipeDirection = DIRECTION.DOWN;
+			}
+		}
+	} else if (initialTouchX < finalTouchX) {
+		swipeDirection = DIRECTION.RIGHT;
+		if (abs(initialTouchX - finalTouchX) < abs(initialTouchY - finalTouchY)) {
+			if (initialTouchY > finalTouchY) {
+				swipeDirection = DIRECTION.UP;
+			} else if (initialTouchY < finalTouchY) {
+				swipeDirection = DIRECTION.DOWN;
+			}
+		}
+	} else {
+		if (initialTouchY > finalTouchY) {
+			swipeDirection = DIRECTION.UP;
+		} else if (initialTouchY < finalTouchY) {
+			swipeDirection = DIRECTION.DOWN;
+		}
+	}
+};
+
 var onTouchMoved = function(e){
 	e.preventDefault();
 	touchesList = e.targetTouches;
@@ -1222,6 +1261,13 @@ var onTouchStart = function(e){
 	screenIsTouched = true;
 	numberOfTouches = e.targetTouches.length;
 	touchesList = e.targetTouches;
+	if (touchesList.length === 1) {
+		initialTouchX = touchesList[0].pageX;
+		initialTouchY = touchesList[0].pageY;
+	} else {
+		initialTouchX = 0;
+		initialTouchY = 0;
+	}
 	touchStart(e);
 };
 
@@ -1231,6 +1277,11 @@ var onTouchEnd = function(e){
 	}
 	numberOfTouches = e.targetTouches.length;
 	touchesList = e.targetTouches;
+	if (0 < initialTouchX && 0 < initialTouchY) {
+		finalTouchX = e.changedTouches[0].pageX;
+		finalTouchY = e.changedTouches[0].pageY;
+		calculateSwipeDirection();
+	}
 	touchEnd(e);
 };
 
