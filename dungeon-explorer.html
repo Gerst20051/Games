@@ -39,10 +39,10 @@ body {
 </div>
 <script>
 let TILE_SIZE = 20;
-let MAP_WIDTH = 40;  // Viewport size
-let MAP_HEIGHT = 30; // Viewport size
-let WORLD_WIDTH = 80;  // Actual world size (double viewport)
-let WORLD_HEIGHT = 60; // Actual world size (double viewport)
+let VIEWPORT_WIDTH = 40;
+let VIEWPORT_HEIGHT = 30;
+let WORLD_WIDTH = VIEWPORT_WIDTH * 2;
+let WORLD_HEIGHT = VIEWPORT_HEIGHT * 2;
 
 const TILE = {
     DOOR: 0,
@@ -169,8 +169,8 @@ class Camera {
     }
 
     worldToScreen(worldX, worldY) {
-        const screenCenterX = Math.floor(MAP_WIDTH / 2);
-        const screenCenterY = Math.floor(MAP_HEIGHT / 2);
+        const screenCenterX = Math.floor(VIEWPORT_WIDTH / 2);
+        const screenCenterY = Math.floor(VIEWPORT_HEIGHT / 2);
 
         return {
             x: worldX - this.x + screenCenterX,
@@ -180,7 +180,7 @@ class Camera {
 
     isVisible(worldX, worldY) {
         const screen = this.worldToScreen(worldX, worldY);
-        return screen.x >= 0 && screen.x < MAP_WIDTH && screen.y >= 0 && screen.y < MAP_HEIGHT;
+        return screen.x >= 0 && screen.x < VIEWPORT_WIDTH && screen.y >= 0 && screen.y < VIEWPORT_HEIGHT;
     }
 }
 
@@ -193,7 +193,12 @@ class World {
     }
 
     generate() {
-        // Initialize world map with walls
+        this.generateWorldMap();
+        this.generateRooms();
+        this.connectRooms();
+    }
+
+    generateWorldMap() {
         this.map = [];
         for (let y = 0; y < this.height; y++) {
             this.map[y] = [];
@@ -201,12 +206,11 @@ class World {
                 this.map[y][x] = TILE.WALL;
             }
         }
+    }
 
+    generateRooms() {
         this.rooms = [];
-
-        // Generate rooms
         const roomCount = Math.floor(Math.random() * 9) + 16;
-
         for (let i = 0; i < roomCount; i++) {
             const room = this.generateRoom();
             if (room && !this.roomOverlaps(room)) {
@@ -214,9 +218,6 @@ class World {
                 this.carveRoom(room);
             }
         }
-
-        // Connect rooms with corridors
-        this.connectRooms();
     }
 
     generateRoom() {
@@ -488,10 +489,8 @@ class Game {
     enemyTurn() {
         for (let i = 0; i < this.enemies.length; i++) {
             const enemy = this.enemies[i];
-
             const playerRoom = this.world.getRoomAt(this.player.x, this.player.y);
             const enemyRoom = this.world.getRoomAt(enemy.x, enemy.y);
-
             if (playerRoom === enemyRoom && playerRoom !== null) {
                 enemy.moveTowards(this.player.x, this.player.y, this.world);
             }
@@ -500,21 +499,26 @@ class Game {
 
     draw() {
         background(0, 0, 0);
+        this.drawMap();
+        this.drawItems();
+        this.drawEnemies();
+        this.drawPlayer();
+        this.drawUI();
+    }
 
-        // Calculate visible world bounds
-        const viewCenterX = Math.floor(MAP_WIDTH / 2);
-        const viewCenterY = Math.floor(MAP_HEIGHT / 2);
+    drawMap() {
+        const viewCenterX = Math.floor(VIEWPORT_WIDTH / 2);
+        const viewCenterY = Math.floor(VIEWPORT_HEIGHT / 2);
         const worldStartX = this.camera.x - viewCenterX - 1;
         const worldStartY = this.camera.y - viewCenterY - 1;
         const worldEndX = this.camera.x + viewCenterX + 1;
         const worldEndY = this.camera.y + viewCenterY + 1;
 
-        // Draw map (only visible tiles)
         for (let worldY = Math.max(0, worldStartY); worldY < Math.min(this.world.map.length, worldEndY); worldY++) {
             for (let worldX = Math.max(0, worldStartX); worldX < Math.min(this.world.map[0].length, worldEndX); worldX++) {
                 const screen = this.camera.worldToScreen(worldX, worldY);
 
-                if (screen.x < -1 || screen.x >= MAP_WIDTH || screen.y < -1 || screen.y >= MAP_HEIGHT) continue;
+                if (screen.x < -1 || screen.x >= VIEWPORT_WIDTH || screen.y < -1 || screen.y >= VIEWPORT_HEIGHT) continue;
 
                 const tile = this.world.map[worldY][worldX];
                 const screenX = screen.x * TILE_SIZE;
@@ -536,8 +540,9 @@ class Game {
                 rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
             }
         }
+    }
 
-        // Draw items (only visible ones)
+    drawItems() {
         for (let i = 0; i < this.items.length; i++) {
             const item = this.items[i];
 
@@ -546,7 +551,7 @@ class Game {
             const screen = this.camera.worldToScreen(item.x, item.y);
 
             // Additional safety check to ensure items stay within game grid
-            if (screen.x < 0 || screen.x >= MAP_WIDTH || screen.y < 0 || screen.y >= MAP_HEIGHT) continue;
+            if (screen.x < 0 || screen.x >= VIEWPORT_WIDTH || screen.y < 0 || screen.y >= VIEWPORT_HEIGHT) continue;
 
             const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
             const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
@@ -562,8 +567,9 @@ class Game {
             noStroke();
             ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
         }
+    }
 
-        // Draw enemies (only visible ones)
+    drawEnemies() {
         for (let i = 0; i < this.enemies.length; i++) {
             const enemy = this.enemies[i];
 
@@ -572,39 +578,38 @@ class Game {
             const screen = this.camera.worldToScreen(enemy.x, enemy.y);
 
             // Additional safety check to ensure enemies stay within game grid
-            if (screen.x < 0 || screen.x >= MAP_WIDTH || screen.y < 0 || screen.y >= MAP_HEIGHT) continue;
+            if (screen.x < 0 || screen.x >= VIEWPORT_WIDTH || screen.y < 0 || screen.y >= VIEWPORT_HEIGHT) continue;
 
             const screenX = screen.x * TILE_SIZE + TILE_SIZE / 2;
             const screenY = screen.y * TILE_SIZE + TILE_SIZE / 2;
 
             if (enemy.type === 'goblin') {
-                fill(0, 150, 0);
+                fill(0, 150, 0); // green
             } else {
-                fill(150, 0, 0);
+                fill(150, 0, 0); // red
             }
 
             noStroke();
             ellipse(screenX, screenY, TILE_SIZE / 2, TILE_SIZE / 2);
         }
+    }
 
-        // Draw player (always at screen center)
-        const playerCenterX = Math.floor(MAP_WIDTH / 2);
-        const playerCenterY = Math.floor(MAP_HEIGHT / 2);
+    drawPlayer() {
+        const playerCenterX = Math.floor(VIEWPORT_WIDTH / 2);
+        const playerCenterY = Math.floor(VIEWPORT_HEIGHT / 2);
         const playerScreenX = playerCenterX * TILE_SIZE + TILE_SIZE / 2;
         const playerScreenY = playerCenterY * TILE_SIZE + TILE_SIZE / 2;
-        fill(0, 0, 255);
+        fill(0, 0, 255); // blue
         noStroke();
         ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
-
-        this.drawUI();
     }
 
     drawUI() {
-        const uiStartY = MAP_HEIGHT * TILE_SIZE + 30;
+        const uiStartY = VIEWPORT_HEIGHT * TILE_SIZE + 30;
         const fontSize = Math.max(12, Math.floor(TILE_SIZE * 0.6));
         textSize(fontSize);
 
-        fill(255, 255, 255);
+        fill(255, 255, 255); // white
         text('Health: ' + this.player.health + '/' + this.player.maxHealth, 10, uiStartY);
         text('Level: ' + this.player.level, 150, uiStartY);
         text('Exp: ' + this.player.exp, 220, uiStartY);
@@ -612,10 +617,10 @@ class Game {
         text('Pos: ' + this.player.x + ',' + this.player.y, 400, uiStartY);
 
         if (!this.gameRunning) {
-            fill(255, 0, 0);
+            fill(255, 0, 0); // red
             text('GAME OVER! Press R to restart', 10, uiStartY + fontSize + 10);
         } else {
-            fill(200, 200, 200);
+            fill(200, 200, 200); // gray
             text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiStartY + fontSize + 10);
         }
     }
@@ -638,18 +643,18 @@ function calculateMapDimensions() {
     TILE_SIZE = Math.max(minTileSize, Math.min(maxTileSize, calculatedTileSize));
 
     // Calculate viewport dimensions based on the tile size
-    MAP_WIDTH = Math.floor(maxWidth / TILE_SIZE);
-    MAP_HEIGHT = Math.floor(availableHeight / TILE_SIZE);
+    VIEWPORT_WIDTH = Math.floor(maxWidth / TILE_SIZE);
+    VIEWPORT_HEIGHT = Math.floor(availableHeight / TILE_SIZE);
 
     // Ensure minimum viewport size for playability
-    MAP_WIDTH = Math.max(20, MAP_WIDTH);
-    MAP_HEIGHT = Math.max(15, MAP_HEIGHT);
+    VIEWPORT_WIDTH = Math.max(20, VIEWPORT_WIDTH);
+    VIEWPORT_HEIGHT = Math.max(15, VIEWPORT_HEIGHT);
 
     // Create world that's double the viewport size in all directions
-    WORLD_WIDTH = MAP_WIDTH * 2;
-    WORLD_HEIGHT = MAP_HEIGHT * 2;
+    WORLD_WIDTH = VIEWPORT_WIDTH * 2;
+    WORLD_HEIGHT = VIEWPORT_HEIGHT * 2;
 
-    console.log(`Screen: ${maxWidth}x${maxHeight}, Tiles: ${TILE_SIZE}px, Viewport: ${MAP_WIDTH}x${MAP_HEIGHT}, World: ${WORLD_WIDTH}x${WORLD_HEIGHT}`);
+    console.log(`Screen: ${maxWidth}x${maxHeight}, Tiles: ${TILE_SIZE}px, Viewport: ${VIEWPORT_WIDTH}x${VIEWPORT_HEIGHT}, World: ${WORLD_WIDTH}x${WORLD_HEIGHT}`);
 }
 
 let game;
