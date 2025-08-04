@@ -429,8 +429,8 @@ var draw = function(){
     // Draw items
     for (var i = 0; i < game.items.length; i++) {
         var item = game.items[i];
-        var screenX = item.x * TILE_SIZE + TILE_SIZE / 4;
-        var screenY = item.y * TILE_SIZE + TILE_SIZE / 4;
+        var screenX = item.x * TILE_SIZE + TILE_SIZE / 2;
+        var screenY = item.y * TILE_SIZE + TILE_SIZE / 2;
 
         if (item.type === 'health_potion') {
             fill(255, 0, 0); // Red potion
@@ -447,8 +447,8 @@ var draw = function(){
     // Draw enemies
     for (var i = 0; i < game.enemies.length; i++) {
         var enemy = game.enemies[i];
-        var screenX = enemy.x * TILE_SIZE + TILE_SIZE / 4;
-        var screenY = enemy.y * TILE_SIZE + TILE_SIZE / 4;
+        var screenX = enemy.x * TILE_SIZE + TILE_SIZE / 2;
+        var screenY = enemy.y * TILE_SIZE + TILE_SIZE / 2;
 
         if (enemy.type === 'goblin') {
             fill(0, 150, 0); // Green goblin
@@ -461,8 +461,8 @@ var draw = function(){
     }
 
     // Draw player
-    var playerScreenX = game.player.x * TILE_SIZE + TILE_SIZE / 4;
-    var playerScreenY = game.player.y * TILE_SIZE + TILE_SIZE / 4;
+    var playerScreenX = game.player.x * TILE_SIZE + TILE_SIZE / 2;
+    var playerScreenY = game.player.y * TILE_SIZE + TILE_SIZE / 2;
     fill(0, 0, 255); // Blue player
     noStroke();
     ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
