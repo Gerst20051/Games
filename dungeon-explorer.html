@@ -39,8 +39,10 @@ body {
 </div>
 <script>
 let TILE_SIZE = 20;
-let MAP_WIDTH = 40;
-let MAP_HEIGHT = 30;
+let MAP_WIDTH = 40;  // Viewport size
+let MAP_HEIGHT = 30; // Viewport size
+let WORLD_WIDTH = 80;  // Actual world size (double viewport)
+let WORLD_HEIGHT = 60; // Actual world size (double viewport)
 
 const TILE = {
     DOOR: 0,
@@ -69,18 +71,19 @@ const game = {
 
 // Map generation
 function generateDungeon() {
+    // Initialize world map with walls (double viewport size)
     game.map = [];
-    for (let y = 0; y < MAP_HEIGHT; y++) {
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
         game.map[y] = [];
-        for (let x = 0; x < MAP_WIDTH; x++) {
+        for (let x = 0; x < WORLD_WIDTH; x++) {
             game.map[y][x] = TILE.WALL;
         }
     }
 
     game.rooms = [];
 
-    // Generate 8-12 rooms
-    const roomCount = Math.floor(Math.random() * 5) + 8;
+    // Generate more rooms for the larger world (16-24 rooms)
+    const roomCount = Math.floor(Math.random() * 9) + 16;
 
     for (let i = 0; i < roomCount; i++) {
         const room = generateRoom();
@@ -111,8 +114,8 @@ function generateRoom() {
     while (attempts < 100) {
         const width = Math.floor(Math.random() * 8) + 4; // 4-11 wide
         const height = Math.floor(Math.random() * 6) + 4; // 4-9 tall
-        const x = Math.floor(Math.random() * (MAP_WIDTH - width - 2)) + 1;
-        const y = Math.floor(Math.random() * (MAP_HEIGHT - height - 2)) + 1;
+        const x = Math.floor(Math.random() * (WORLD_WIDTH - width - 2)) + 1;
+        const y = Math.floor(Math.random() * (WORLD_HEIGHT - height - 2)) + 1;
         const room = { x: x, y: y, width: width, height: height };
         if (!roomOverlaps(room)) {
             return room;
@@ -174,7 +177,7 @@ function createHorizontalTunnel(x1, x2, y) {
     const minX = Math.min(x1, x2);
     const maxX = Math.max(x1, x2);
     for (let x = minX; x <= maxX; x++) {
-        if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
             game.map[y][x] = TILE.FLOOR;
         }
     }
@@ -184,7 +187,7 @@ function createVerticalTunnel(y1, y2, x) {
     const minY = Math.min(y1, y2);
     const maxY = Math.max(y1, y2);
     for (let y = minY; y <= maxY; y++) {
-        if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+        if (x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT) {
             game.map[y][x] = TILE.FLOOR;
         }
     }
@@ -192,7 +195,7 @@ function createVerticalTunnel(y1, y2, x) {
 
 function generateEnemies() {
     game.enemies = [];
-    const enemyCount = Math.floor(Math.random() * 8) + 5; // 5-12 enemies
+    const enemyCount = Math.floor(Math.random() * 16) + 10; // 10-25 enemies for larger world
 
     for (let i = 0; i < enemyCount; i++) {
         const room = game.rooms[Math.floor(Math.random() * game.rooms.length)];
@@ -215,7 +218,7 @@ function generateEnemies() {
 
 function generateItems() {
     game.items = [];
-    const itemCount = Math.floor(Math.random() * 6) + 3; // 3-8 items
+    const itemCount = Math.floor(Math.random() * 12) + 6; // 6-17 items for larger world
 
     for (let i = 0; i < itemCount; i++) {
         const room = game.rooms[Math.floor(Math.random() * game.rooms.length)];
@@ -294,7 +297,7 @@ function handleKeyPress(key) {
 }
 
 function isValidMove(x, y) {
-    return x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT && game.map[y][x] !== TILE.WALL;
+    return x >= 0 && x < WORLD_WIDTH && y >= 0 && y < WORLD_HEIGHT && game.map[y][x] !== TILE.WALL;
 }
 
 function checkForItems() {
@@ -360,10 +363,11 @@ function enemyTurn() {
                 enemy.y += dy > 0 ? 1 : -1;
             }
 
-            // Make sure enemy doesn't move into walls
+            // Make sure enemy doesn't move into walls or out of bounds
             if (!isValidMove(enemy.x, enemy.y)) {
-                enemy.x = game.player.x - dx;
-                enemy.y = game.player.y - dy;
+                // Revert the move
+                enemy.x = enemy.x - (dx > 0 ? 1 : -1);
+                enemy.y = enemy.y - (dy > 0 ? 1 : -1);
             }
         }
     }
@@ -437,15 +441,19 @@ function calculateMapDimensions() {
     // Clamp tile size to reasonable bounds
     TILE_SIZE = Math.max(minTileSize, Math.min(maxTileSize, calculatedTileSize));
 
-    // Calculate actual map dimensions based on the tile size
+    // Calculate viewport dimensions based on the tile size
     MAP_WIDTH = Math.floor(maxWidth / TILE_SIZE);
     MAP_HEIGHT = Math.floor(availableHeight / TILE_SIZE);
 
-    // Ensure minimum map size for playability
+    // Ensure minimum viewport size for playability
     MAP_WIDTH = Math.max(20, MAP_WIDTH);
     MAP_HEIGHT = Math.max(15, MAP_HEIGHT);
 
-    console.log(`Screen: ${maxWidth}x${maxHeight}, Tiles: ${TILE_SIZE}px, Map: ${MAP_WIDTH}x${MAP_HEIGHT}`);
+    // Create world that's double the viewport size in all directions
+    WORLD_WIDTH = MAP_WIDTH * 2;
+    WORLD_HEIGHT = MAP_HEIGHT * 2;
+
+    console.log(`Screen: ${maxWidth}x${maxHeight}, Tiles: ${TILE_SIZE}px, Viewport: ${MAP_WIDTH}x${MAP_HEIGHT}, World: ${WORLD_WIDTH}x${WORLD_HEIGHT}`);
 }
 
 var draw = function(){
