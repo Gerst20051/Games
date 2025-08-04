@@ -410,11 +410,6 @@ class Game {
     }
 
     setupEventListeners() {
-        document.addEventListener('keydown', (e) => {
-            this.handleKeyPress(e.key);
-            e.preventDefault();
-        });
-
         window.addEventListener('resize', () => {
             setTimeout(() => {
                 calculateMapDimensions();
@@ -423,35 +418,35 @@ class Game {
         });
     }
 
-    handleKeyPress(key) {
+    handleKeyDown() {
         if (!this.gameRunning) return;
 
         let newX = this.player.x;
         let newY = this.player.y;
         let moved = false;
 
-        switch (key) {
-            case 'ArrowUp':
-            case 'w':
+        switch (keyCode) {
+            case keys.UP:
+            case keys.W:
                 newY--;
                 moved = true;
                 break;
-            case 'ArrowDown':
-            case 's':
+            case keys.DOWN:
+            case keys.S:
                 newY++;
                 moved = true;
                 break;
-            case 'ArrowLeft':
-            case 'a':
+            case keys.LEFT:
+            case keys.A:
                 newX--;
                 moved = true;
                 break;
-            case 'ArrowRight':
-            case 'd':
+            case keys.RIGHT:
+            case keys.D:
                 newX++;
                 moved = true;
                 break;
-            case 'r':
+            case keys.R:
                 this.generateDungeon();
                 return;
         }
@@ -672,6 +667,12 @@ var setup = function(){
 var draw = function(){
     if (game) {
         game.draw();
+    }
+};
+
+var keyDown = function(){
+    if (game) {
+        game.handleKeyDown();
     }
 };
 
