@@ -38,10 +38,10 @@ body {
 </div>
 </div>
 <script>
-// Game constants
-const TILE_SIZE = 20;
-const MAP_WIDTH = 40;
-const MAP_HEIGHT = 30;
+// Game constants - will be calculated dynamically
+let TILE_SIZE = 20;
+let MAP_WIDTH = 40;
+let MAP_HEIGHT = 30;
 
 // Tile types
 const TILE = {
@@ -374,14 +374,49 @@ function getRoomAt(x, y) {
 }
 
 var setup = function(){
-    size(MAP_WIDTH * TILE_SIZE, MAP_HEIGHT * TILE_SIZE + 100); // Extra space for UI
+	fullScreenCanvas();
+    calculateMapDimensions();
     generateDungeon();
 
     document.addEventListener('keydown', function(e) {
         handleKeyPress(e.key);
         e.preventDefault();
     });
+
+    window.addEventListener('resize', function() {
+        setTimeout(function() {
+            calculateMapDimensions();
+            generateDungeon();
+        }, 100);
+    });
 };
+
+function calculateMapDimensions() {
+    // Reserve space for UI at the bottom
+    const uiHeight = 80; // Increased from 60 to 80 for more UI space
+    const availableHeight = maxHeight - uiHeight;
+
+    // Calculate how many tiles can fit with a reasonable minimum size
+    const minTileSize = 12;
+    const maxTileSize = 30;
+
+    // Try to fit around 40 tiles width-wise, but adjust based on screen
+    const desiredMapWidth = 40;
+    let calculatedTileSize = Math.floor(maxWidth / desiredMapWidth);
+
+    // Clamp tile size to reasonable bounds
+    TILE_SIZE = Math.max(minTileSize, Math.min(maxTileSize, calculatedTileSize));
+
+    // Calculate actual map dimensions based on the tile size
+    MAP_WIDTH = Math.floor(maxWidth / TILE_SIZE);
+    MAP_HEIGHT = Math.floor(availableHeight / TILE_SIZE);
+
+    // Ensure minimum map size for playability
+    MAP_WIDTH = Math.max(20, MAP_WIDTH);
+    MAP_HEIGHT = Math.max(15, MAP_HEIGHT);
+
+    console.log(`Screen: ${maxWidth}x${maxHeight}, Tiles: ${TILE_SIZE}px, Map: ${MAP_WIDTH}x${MAP_HEIGHT}`);
+}
 
 var draw = function(){
     background(0, 0, 0);
@@ -452,19 +487,22 @@ var draw = function(){
     ellipse(playerScreenX, playerScreenY, TILE_SIZE / 2, TILE_SIZE / 2);
 
     // Draw UI
-    const uiY = MAP_HEIGHT * TILE_SIZE + 10;
+    const uiStartY = MAP_HEIGHT * TILE_SIZE + 20; // Increased from 10 to 20 pixels gap
+    const fontSize = Math.max(12, Math.floor(TILE_SIZE * 0.6)); // Scale font with tile size
+    textSize(fontSize);
+
     fill(255, 255, 255); // White text
-    text('Health: ' + game.player.health + '/' + game.player.maxHealth, 10, uiY);
-    text('Level: ' + game.player.level, 150, uiY);
-    text('Exp: ' + game.player.exp, 220, uiY);
-    text('Turn: ' + game.turnCount, 300, uiY);
+    text('Health: ' + game.player.health + '/' + game.player.maxHealth, 10, uiStartY);
+    text('Level: ' + game.player.level, 150, uiStartY);
+    text('Exp: ' + game.player.exp, 220, uiStartY);
+    text('Turn: ' + game.turnCount, 350, uiStartY);
 
     if (!game.gameRunning) {
         fill(255, 0, 0);
-        text('GAME OVER! Press R to restart', 10, uiY + 20);
+        text('GAME OVER! Press R to restart', 10, uiStartY + fontSize + 10); // Increased gap from 5 to 10
     } else {
         fill(200, 200, 200);
-        text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiY + 20);
+        text('Use WASD or arrow keys to move. R to regenerate dungeon.', 10, uiStartY + fontSize + 10); // Increased gap from 5 to 10
     }
 };
 
