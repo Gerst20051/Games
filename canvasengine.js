@@ -1113,6 +1113,16 @@ debounce = function(func, timeout = 1E3){ // only call a function once within th
 		timer = setTimeout(() => { func.apply(this, args); }, timeout);
 	};
 },
+throttle = function(func, interval = 1E3){ // only call a function once per specified time interval
+	let inThrottle;
+	return (...args) => {
+		if (!inThrottle) {
+			func.apply(this, args);
+			inThrottle = true;
+			setTimeout(() => inThrottle = false, interval);
+		}
+	};
+},
 times = function(num, func){ // call a function the provided num of times
 	for (let i = 0; i < num; i++) {
 		func(i);
