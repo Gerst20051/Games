@@ -38,19 +38,16 @@ body {
 </div>
 </div>
 <script>
-var time_second = 0,
-	center = 200,
-	second_radius = 100,
+var layout,
+	time_second = 0,
 	second_angle = 3 * HALF_PI,
 	second_interval = PI / 30,
-	minute_radius = 100,
 	minute_angle = 3 * HALF_PI,
 	minute_interval = second_interval / 60,
-	hour_radius = 50,
 	hour_angle = 3 * HALF_PI,
 	hour_interval = minute_interval / 12;
 
-const drawUI = function(){
+const drawUI = function(layout){
 	background(86, 99, 163); // muted indigo, periwinkle blue
 	textSize(12);
 	fill(240, 126, 65); // warm orange, pumpkin, burnt orange
@@ -62,21 +59,21 @@ const drawUI = function(){
 	text('S Angle: ' + second_angle, 10, 120);
 	textSize(30);
 	fill(255, 255, 255);
-	text('12', 180, 47);
-	text('3', 360, 208);
-	text('6', 192, 375);
-	text('9', 25, 208);
+	text('12', layout.centerX - 12, layout.centerY - layout.minuteR - 15);
+	text('3',  layout.centerX + layout.minuteR + 8, layout.centerY + 5);
+	text('6',  layout.centerX - 8, layout.centerY + layout.minuteR + 20);
+	text('9',  layout.centerX - layout.minuteR - 22, layout.centerY + 5);
 };
 
 // Draw a clock hand adjusted for stroke thickness so the visible hand
 // starts exactly at the center and ends exactly at the target radius.
-const drawHand = function(centerXY, radius, angle, thickness, strokeColor){
+const drawHand = function(centerX, centerY, radius, angle, thickness, strokeColor){
 	const ux = cos(angle), uy = sin(angle);
 	const half = thickness / 2;
-	const startX = centerXY + ux * half;
-	const startY = centerXY + uy * half;
-	const endX = centerXY + ux * (radius - half);
-	const endY = centerXY + uy * (radius - half);
+	const startX = centerX + ux * half;
+	const startY = centerY + uy * half;
+	const endX = centerX + ux * (radius - half);
+	const endY = centerY + uy * (radius - half);
 	strokeWeight(thickness);
 	if (Array.isArray(strokeColor)) {
 		stroke(strokeColor[0], strokeColor[1], strokeColor[2]);
@@ -84,6 +81,17 @@ const drawHand = function(centerXY, radius, angle, thickness, strokeColor){
 		stroke(strokeColor);
 	}
 	line(startX, startY, endX, endY);
+};
+
+const computeLayout = function(){
+	const size = min(c.W, c.H);
+	layout = {
+		centerX: c.W / 2,
+		centerY: c.H / 2,
+		minuteR: size * 0.42,
+		hourR:   size * 0.28,
+		secondR: size * 0.46,
+	};
 };
 
 const calculateAngles = function(){
@@ -97,20 +105,34 @@ const calculateAngles = function(){
 	hour_angle   = (3 * HALF_PI + ((h * 3600) + (m * 60) + s) * hour_interval) % TWO_PI;
 };
 
+var setup = function(){
+	fullScreenCanvas();
+	computeLayout();
+};
+
 var draw = function(){
 	calculateAngles();
-	drawUI();
+	drawUI(layout);
 	// Minute hand (warm orange, pumpkin, burnt orange)
-	drawHand(center, minute_radius, minute_angle, 20, [240, 126, 65]);
+	drawHand(layout.centerX, layout.centerY, layout.minuteR, minute_angle, 20, [240, 126, 65]);
 	// Hour hand (vivid red‑orange)
-	drawHand(center, hour_radius, hour_angle, 20, [207, 62, 29]);
+	drawHand(layout.centerX, layout.centerY, layout.hourR,   hour_angle,   20, [207, 62, 29]);
 	// Second hand (black)
-	drawHand(center, second_radius, second_angle, 2, [0, 0, 0]);
+	drawHand(layout.centerX, layout.centerY, layout.secondR, second_angle, 2,  [0, 0, 0]);
+};
+
+var windowResized = function(){
+	computeLayout();
+};
+
+var orientationChanged = function(){
+	windowResized();
 };
 
 window.onload = function(){
 	window.canvas = new Canvas(document.getElementById("canvas1"));
 	window.ctx = canvas.ctx;
+	canvas.setup = window.setup;
 	canvas.draw = throttle(window.draw, 1000);
 	canvas.run();
 };
