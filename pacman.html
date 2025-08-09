@@ -218,6 +218,11 @@ function getRandomCoordinateToSpawnGhost() {
     return getRandomCoordinateOfType(CAGE);
 }
 
+function getDoorBlockIndex() {
+    var doorCoordinate = getRandomCoordinateOfType(DOOR);
+    return getBlockFromCoordinates.apply(null, doorCoordinate);
+}
+
 function getGameObjectsOfType(objectType) {
     var matches = [];
     gameObjects.forEach(function (gameObject) {
@@ -507,6 +512,13 @@ var Ghost = function (ghostType) {
     this.blackEyeOffsetY = 0;
     this.trangleOffsetX = 0;
 
+    // cage release control
+    this.spawnTimeInSeconds = timeSeconds();
+    this.releaseDelayInSeconds = randomDouble(1.5, 6);
+    this.released = false;
+    this.exiting = false;
+    this.doorBlock = getDoorBlockIndex();
+
     this.run = function () {
         if (this.active && !levelWon && !gameOver) {
             if (this.frightened) {
@@ -515,10 +527,29 @@ var Ghost = function (ghostType) {
                     this.frightenedTimeInSeconds = 0;
                 }
             }
-            if (this.dir === NO_DIRECTION) {
+
+            // trigger release after random delay
+            if (!this.released && this.releaseDelayInSeconds <= diff(this.spawnTimeInSeconds, timeSeconds())) {
+                this.released = true;
+                this.exiting = true;
+            }
+
+            // while exiting, bias movement toward the door and then up through it
+            if (this.exiting) {
+                this.exitCageTowardDoor();
+            } else if (this.dir === NO_DIRECTION) {
                 this.chooseRandomDirection();
             }
             this.move();
+
+            // once we've made it to the path outside, stop exiting behavior
+            if (this.exiting) {
+                var currentBlock = getBlockFromGameObject(this);
+                var currentMaze = mazes[currentMazeLevel];
+                if (currentMaze[currentBlock[0]] && currentMaze[currentBlock[0]][currentBlock[1]] === PATH) {
+                    this.exiting = false;
+                }
+            }
             this.setBlackEyeOffset();
         }
     };
@@ -576,6 +607,21 @@ var Ghost = function (ghostType) {
         this.prevDir = newDirection;
     };
 
+    this.exitCageTowardDoor = function () {
+        var currentBlock = getBlockFromGameObject(this);
+        var currentCol = currentBlock[1];
+        var doorCol = this.doorBlock[1];
+        if (currentCol < doorCol) {
+            this.dir = RIGHT;
+        } else if (doorCol < currentCol) {
+            this.dir = LEFT;
+        } else {
+            // aligned with door column; move up through the door
+            this.dir = UP;
+        }
+        this.prevDir = this.dir;
+    };
+
     this.move = function () {
         if (this.active) {
             // var nearGameObjects = this.getNearGameObjectsOfType(GHOST);
@@ -588,7 +634,10 @@ var Ghost = function (ghostType) {
             };
             var currentDirectionIndex = directionLookup[this.dir];
             if (-1 < currentDirectionIndex) {
-                if (nearBlockTypes[currentDirectionIndex] === WALL) { // GATE
+                if (
+                    nearBlockTypes[currentDirectionIndex] === WALL ||
+                    (nearBlockTypes[currentDirectionIndex] === DOOR && !this.released)
+                ) { // treat door as closed until released
                     this.dir = NO_DIRECTION;
                     this.moveToCenterOfCurrentBlock();
                     return;
