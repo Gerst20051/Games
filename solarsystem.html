@@ -1,0 +1,308 @@
+<!--
+ ::::::::  :::::::::  ::::::::::     ::: ::::::::::: :::::::::: :::::::::       :::::::::  :::   :::                               
+:+:    :+: :+:    :+: :+:          :+: :+:   :+:     :+:        :+:    :+:      :+:    :+: :+:   :+: :+:                           
++:+        +:+    +:+ +:+         +:+   +:+  +:+     +:+        +:+    +:+      +:+    +:+  +:+ +:+                                
++#+        +#++:++#:  +#++:++#   +#++:++#++: +#+     +#++:++#   +#+    +:+      +#++:++#+    +#++:                                 
++#+        +#+    +#+ +#+        +#+     +#+ +#+     +#+        +#+    +#+      +#+    +#+    +#+                                  
+#+#    #+# #+#    #+# #+#        #+#     #+# #+#     #+#        #+#    #+#      #+#    #+#    #+#    #+#                           
+ ########  ###    ### ########## ###     ### ###     ########## #########       #########     ###                                  
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                   
+    :::     ::::    ::: :::::::::  :::::::::  :::::::::: :::       :::       ::::::::  :::::::::: :::::::::   :::::::: ::::::::::: 
+  :+: :+:   :+:+:   :+: :+:    :+: :+:    :+: :+:        :+:       :+:      :+:    :+: :+:        :+:    :+: :+:    :+:    :+:     
+ +:+   +:+  :+:+:+  +:+ +:+    +:+ +:+    +:+ +:+        +:+       +:+      +:+        +:+        +:+    +:+ +:+           +:+     
++#++:++#++: +#+ +:+ +#+ +#+    +:+ +#++:++#:  +#++:++#   +#+  +:+  +#+      :#:        +#++:++#   +#++:++#:  +#++:++#++    +#+     
++#+     +#+ +#+  +#+#+# +#+    +#+ +#+    +#+ +#+        +#+ +#+#+ +#+      +#+   +#+# +#+        +#+    +#+        +#+    +#+     
+#+#     #+# #+#   #+#+# #+#    #+# #+#    #+# #+#         #+#+# #+#+#       #+#    #+# #+#        #+#    #+# #+#    #+#    #+#     
+###     ### ###    #### #########  ###    ### ##########   ###   ###         ########  ########## ###    ###  ########     ###     
+-->
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Solar System (via Canvas Engine)</title>
+<script src="canvasengine.js"></script>
+<style>
+body {
+	margin: 0;
+	padding: 0;
+}
+
+#canvaspane {
+	cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="content">
+<div id="canvaspane">
+<canvas id="canvas1" width="100" height="100"></canvas>
+</div>
+</div>
+<script>
+class CelestialBody {
+  constructor({ name, radius, color, parent = null, orbitRadius = 0, orbitSpeed = 0, angleOffset = 0 }) {
+    this.name = name;
+    this.radius = radius; // visual radius in px
+    this.color = color;   // any canvas fillStyle value
+    this.parent = parent; // another CelestialBody or null
+    this.orbitRadius = orbitRadius; // distance from parent
+    this.orbitSpeed = orbitSpeed;   // radians per second
+    this.angleOffset = angleOffset; // initial angle offset in radians
+  }
+
+  getAngle(tSeconds) {
+    return this.angleOffset + this.orbitSpeed * tSeconds;
+  }
+
+  getPosition(tSeconds) {
+    if (!this.parent) {
+      // Default center of canvas if no parent
+      return { x: c.W / 2, y: c.H / 2 };
+    }
+    const parentPos = this.parent.getPosition(tSeconds);
+    const angle = this.getAngle(tSeconds);
+    return {
+      x: parentPos.x + this.orbitRadius * Math.cos(angle),
+      y: parentPos.y + this.orbitRadius * Math.sin(angle)
+    };
+  }
+
+  drawOrbitRing(tSeconds, orbitColor = 'rgba(255,255,255,0.08)') {
+    if (!this.parent || this.orbitRadius <= 0) return;
+    const parentPos = this.parent.getPosition(tSeconds);
+    noFill();
+    stroke(orbitColor);
+    strokeWeight(1);
+    circle(parentPos.x, parentPos.y, this.orbitRadius);
+  }
+
+  draw(tSeconds) {
+    // Default draw: orbit ring + filled circle
+    this.drawOrbitRing(tSeconds);
+    const { x, y } = this.getPosition(tSeconds);
+    noStroke();
+    fill(this.color);
+    circle(x, y, this.radius);
+  }
+}
+
+class Star extends CelestialBody {
+  constructor(options) {
+    super({ ...options, parent: null, orbitRadius: 0, orbitSpeed: 0 });
+  }
+
+  getPosition() {
+    return { x: c.W / 2, y: c.H / 2 };
+  }
+
+  draw(tSeconds) {
+    const { x, y } = this.getPosition(tSeconds);
+    // Simple glow
+    const gradient = ctx.createRadialGradient(x, y, this.radius * 0.25, x, y, this.radius * 1.8);
+    gradient.addColorStop(0, this.color);
+    gradient.addColorStop(1, 'rgba(255, 200, 0, 0.05)');
+
+    // Outer glow
+    noStroke();
+    fill(gradient);
+    circle(x, y, this.radius * 1.8);
+
+    // Core
+    fill(this.color);
+    circle(x, y, this.radius);
+  }
+}
+
+class Planet extends CelestialBody {}
+class Moon extends CelestialBody {}
+
+let startTime = 0;
+let objects = [];
+
+var setup = function(){
+  // Canvas
+  fullScreenCanvas();
+  startTime = timeSeconds();
+
+  // Bodies
+  const sun = new Star({ name: 'Sun', radius: 36, color: 'rgba(255, 208, 0, 1)' });
+
+  const mercury = new Planet({
+    name: 'Mercury',
+    radius: 6,
+    color: '#c0c0c0',
+    parent: sun,
+    orbitRadius: 70,
+    orbitSpeed: 1.8,
+    angleOffset: 0
+  });
+
+  const venus = new Planet({
+    name: 'Venus',
+    radius: 9,
+    color: '#d4a15f',
+    parent: sun,
+    orbitRadius: 110,
+    orbitSpeed: 1.2,
+    angleOffset: Math.PI * 0.3
+  });
+
+  const earth = new Planet({
+    name: 'Earth',
+    radius: 10,
+    color: '#2a86ff',
+    parent: sun,
+    orbitRadius: 160,
+    orbitSpeed: 1.0,
+    angleOffset: Math.PI * 0.6
+  });
+
+  const moon = new Moon({
+    name: 'Moon',
+    radius: 3.5,
+    color: '#cccccc',
+    parent: earth,
+    orbitRadius: 24,
+    orbitSpeed: 4.2,
+    angleOffset: Math.PI * 0.2
+  });
+
+  const mars = new Planet({
+    name: 'Mars',
+    radius: 8,
+    color: '#c1440e',
+    parent: sun,
+    orbitRadius: 210,
+    orbitSpeed: 0.8,
+    angleOffset: Math.PI * 1.1
+  });
+  const phobos = new Moon({
+    name: 'Phobos',
+    radius: 2.5,
+    color: '#b3a79a',
+    parent: mars,
+    orbitRadius: 16,
+    orbitSpeed: 4.6,
+    angleOffset: Math.PI * 0.35
+  });
+  const deimos = new Moon({
+    name: 'Deimos',
+    radius: 2,
+    color: '#c5b8ac',
+    parent: mars,
+    orbitRadius: 22,
+    orbitSpeed: 3.2,
+    angleOffset: Math.PI * 0.9
+  });
+
+  // Jupiter and major moons
+  const jupiter = new Planet({
+    name: 'Jupiter',
+    radius: 18,
+    color: '#d9a066',
+    parent: sun,
+    orbitRadius: 270,
+    orbitSpeed: 0.55,
+    angleOffset: Math.PI * 0.2
+  });
+  const io = new Moon({ name: 'Io', radius: 3, color: '#e6d27f', parent: jupiter, orbitRadius: 22, orbitSpeed: 5.0, angleOffset: Math.PI * 0.1 });
+  const europa = new Moon({ name: 'Europa', radius: 3, color: '#cfc5b7', parent: jupiter, orbitRadius: 30, orbitSpeed: 3.5, angleOffset: Math.PI * 0.5 });
+  const ganymede = new Moon({ name: 'Ganymede', radius: 4, color: '#a8a29e', parent: jupiter, orbitRadius: 38, orbitSpeed: 2.8, angleOffset: Math.PI * 0.9 });
+  const callisto = new Moon({ name: 'Callisto', radius: 4, color: '#7d736b', parent: jupiter, orbitRadius: 48, orbitSpeed: 2.0, angleOffset: Math.PI * 1.3 });
+
+  // Saturn and notable moons
+  const saturn = new Planet({
+    name: 'Saturn',
+    radius: 16,
+    color: '#e5c87a',
+    parent: sun,
+    orbitRadius: 340,
+    orbitSpeed: 0.42,
+    angleOffset: Math.PI * 0.55
+  });
+  const titan = new Moon({ name: 'Titan', radius: 4, color: '#d0a65a', parent: saturn, orbitRadius: 50, orbitSpeed: 1.8, angleOffset: Math.PI * 0.2 });
+  const rhea = new Moon({ name: 'Rhea', radius: 3, color: '#c7cbd1', parent: saturn, orbitRadius: 38, orbitSpeed: 2.2, angleOffset: Math.PI * 0.6 });
+  const iapetus = new Moon({ name: 'Iapetus', radius: 3, color: '#8f8a84', parent: saturn, orbitRadius: 58, orbitSpeed: 1.3, angleOffset: Math.PI * 1.0 });
+  const dione = new Moon({ name: 'Dione', radius: 3, color: '#b9bfc6', parent: saturn, orbitRadius: 28, orbitSpeed: 2.8, angleOffset: Math.PI * 1.4 });
+  const enceladus = new Moon({ name: 'Enceladus', radius: 2.5, color: '#e7eef5', parent: saturn, orbitRadius: 20, orbitSpeed: 3.4, angleOffset: Math.PI * 1.8 });
+  const mimas = new Moon({ name: 'Mimas', radius: 2, color: '#a9b0b6', parent: saturn, orbitRadius: 16, orbitSpeed: 3.8, angleOffset: Math.PI * 0.35 });
+  const tethys = new Moon({ name: 'Tethys', radius: 3, color: '#cfd6dc', parent: saturn, orbitRadius: 24, orbitSpeed: 3.0, angleOffset: Math.PI * 0.85 });
+
+  // Uranus and notable moons
+  const uranus = new Planet({
+    name: 'Uranus',
+    radius: 13,
+    color: '#77ccff',
+    parent: sun,
+    orbitRadius: 410,
+    orbitSpeed: 0.30,
+    angleOffset: Math.PI * 0.85
+  });
+  const titania = new Moon({ name: 'Titania', radius: 3, color: '#b9c2c8', parent: uranus, orbitRadius: 32, orbitSpeed: 2.0, angleOffset: Math.PI * 0.25 });
+  const oberon = new Moon({ name: 'Oberon', radius: 3, color: '#a8b0b6', parent: uranus, orbitRadius: 38, orbitSpeed: 1.6, angleOffset: Math.PI * 0.7 });
+  const umbriel = new Moon({ name: 'Umbriel', radius: 2.5, color: '#8f9aa1', parent: uranus, orbitRadius: 26, orbitSpeed: 2.6, angleOffset: Math.PI * 1.1 });
+  const ariel = new Moon({ name: 'Ariel', radius: 2.5, color: '#c7d0d6', parent: uranus, orbitRadius: 22, orbitSpeed: 3.0, angleOffset: Math.PI * 1.5 });
+  const miranda = new Moon({ name: 'Miranda', radius: 2, color: '#d7dee4', parent: uranus, orbitRadius: 18, orbitSpeed: 3.6, angleOffset: Math.PI * 1.9 });
+
+  // Neptune and notable moons
+  const neptune = new Planet({
+    name: 'Neptune',
+    radius: 12,
+    color: '#375fff',
+    parent: sun,
+    orbitRadius: 470,
+    orbitSpeed: 0.25,
+    angleOffset: Math.PI * 1.2
+  });
+  const triton = new Moon({ name: 'Triton', radius: 3.5, color: '#c8d0da', parent: neptune, orbitRadius: 28, orbitSpeed: 2.2, angleOffset: Math.PI * 0.4 });
+  const proteus = new Moon({ name: 'Proteus', radius: 2.5, color: '#9ca3a9', parent: neptune, orbitRadius: 20, orbitSpeed: 3.2, angleOffset: Math.PI * 0.9 });
+  const nereid = new Moon({ name: 'Nereid', radius: 2, color: '#b8c0c7', parent: neptune, orbitRadius: 38, orbitSpeed: 1.2, angleOffset: Math.PI * 1.6 });
+
+  objects = [
+    sun,
+    mercury,
+    venus,
+    earth, moon,
+    mars, phobos, deimos,
+    jupiter, io, europa, ganymede, callisto,
+    saturn, titan, rhea, iapetus, dione, enceladus, mimas, tethys,
+    uranus, titania, oberon, umbriel, ariel, miranda,
+    neptune, triton, proteus, nereid
+  ];
+};
+
+var draw = function(){
+  const t = timeSeconds() - startTime;
+  background(5, 5, 15, 1);
+
+  // Starscape (light sprinkle)
+  noStroke();
+  fill('rgba(255, 255, 255, 0.25)');
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 73) % c.W;
+    const sy = (i * 137) % c.H;
+    circle(sx, sy, 1);
+  }
+
+  // Draw all objects (each has its own draw method)
+  for (let i = 0; i < objects.length; i++) {
+    objects[i].draw(t);
+  }
+};
+
+window.onload = function(){
+	window.canvas = new Canvas(document.getElementById("canvas1"));
+	window.ctx = canvas.ctx;
+	canvas.setup = window.setup;
+	canvas.draw = window.draw;
+	canvas.run();
+};
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-42786295-1');
+</script>
+</body>
+</html>
