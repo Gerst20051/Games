@@ -79,25 +79,21 @@ var getMinuteHourSecs = function(){
 };
 
 (function(){
-	debug(hour_angle);
-	debug("set hour");
-	// minute_angle = 0;
-	debug("minSecs"+getMinuteSecs());
-	minute_angle = (getMinuteSecs()*second_interval)%(2*PI);
-	//(minute()*60)*(minute_interval)
-	// hour_angle = 0;
-	hour_angle = (getHourSecs()*second_interval+getMinuteHourSecs()*second_interval)%(2*PI);
-	//(((hour()%12))*12)*hour_interval
-	debug(hour_angle);
+	// Initialize hand angles based on current time
+	var s = second();
+	var m = minute();
+	var h = hour() % 12;
+
+	// Top (12 o'clock) is 3*PI/2. Advance each hand proportionally.
+	second_angle = (3*PI/2 + s * second_interval) % (2*PI);
+	minute_angle = (3*PI/2 + (m * 60 + s) * minute_interval) % (2*PI);
+	hour_angle   = (3*PI/2 + ((h * 3600) + (m * 60) + s) * hour_interval) % (2*PI);
+
+	// Track current second for display
+	time_second = s;
 })();
 
-// TODO: update to use radiansToDegrees
-var radianDegrees = function(radians){
-	return (radians*(180/PI));
-};
-
 var PolarPoint = function(radius, angle){
-	// angle = radianDegrees(angle%(2*PI));
 	angle = angle%(2*PI);
 	return {
 		getX: (function(){
@@ -130,7 +126,7 @@ var draw = function(){
 	}
 	if (!set_time && time_minute < minute()) {
 		time_second = 0;
-		second_angle = 3*PI/2;
+		second_angle = (3*PI/2) % (2*PI);
 		set_time = true;
 	}
 	background(86, 99, 163);
@@ -138,7 +134,7 @@ var draw = function(){
 	fill(240, 126, 65);
 	text('Second: ' + time_second, 10, 20);
 	text('Minute: ' + minute(), 10, 40);
-	text('Hour: ' + hour()%12, 10, 60);
+	text('Hour: ' + (hour()%12), 10, 60);
 	text('M Angle: ' + minute_angle, 10, 80);
 	text('H Angle: ' + hour_angle, 10, 100);
 	text('S Angle: ' + second_angle, 10, 120);
