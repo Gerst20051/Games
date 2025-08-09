@@ -38,103 +38,25 @@ body {
 </div>
 </div>
 <script>
-var int = 0,
-	time_second = 0,
-	time_minute = minute(),
-	time_hour = hour(),
-	set_time = false,
+var time_second = 0,
 	center = 200,
-	second_x = 200,
-	second_y = 100,
 	second_radius = 100,
-	second_angle = 3*PI/2,
-	second_interval = PI/30,
-	minute_x = 200,
-	minute_y = 100,
+	second_angle = 3 * HALF_PI,
+	second_interval = PI / 30,
 	minute_radius = 100,
-	minute_angle = 3*PI/2,
-	minute_interval = second_interval/60,
-	hour_x = 200,
-	hour_y = 150,
+	minute_angle = 3 * HALF_PI,
+	minute_interval = second_interval / 60,
 	hour_radius = 50,
-	hour_angle = 3*PI/2,
-	hour_interval = minute_interval/12;
+	hour_angle = 3 * HALF_PI,
+	hour_interval = minute_interval / 12;
 
-var getMinuteSecs = function(){
-	var m = minute();
-	var secs = m*60;
-	return secs;
-};
-
-var getHourSecs = function(){
-	var h = hour()%12;
-	var secs = h*60*60;
-	return secs;
-};
-
-var getMinuteHourSecs = function(){
-	var h = minute()/60;
-	var secs = h*60*60;
-	return secs;
-};
-
-(function(){
-	// Initialize hand angles based on current time
-	var s = second();
-	var m = minute();
-	var h = hour() % 12;
-
-	// Top (12 o'clock) is 3*PI/2. Advance each hand proportionally.
-	second_angle = (3*PI/2 + s * second_interval) % (2*PI);
-	minute_angle = (3*PI/2 + (m * 60 + s) * minute_interval) % (2*PI);
-	hour_angle   = (3*PI/2 + ((h * 3600) + (m * 60) + s) * hour_interval) % (2*PI);
-
-	// Track current second for display
-	time_second = s;
-})();
-
-var PolarPoint = function(radius, angle){
-	angle = angle%(2*PI);
-	return {
-		getX: (function(){
-			return (radius*cos(angle));
-		})(),
-		getY: (function(){
-			return (radius*sin(angle));
-		})()
-	};
-};
-
-var angleInterval = function(reps){
-	reps = reps || 1;
-	for (var i = reps; i; i--) {
-		second_angle += second_interval;
-		minute_angle += minute_interval;
-		hour_angle += hour_interval;
-	}
-};
-
-var draw = function(){
-	debug(hour_angle);
-	if (++int === 30) {
-		angleInterval();
-		time_second++;
-		int = 0;
-	}
-	if (time_second === 60) {
-		time_second = 0;
-	}
-	if (!set_time && time_minute < minute()) {
-		time_second = 0;
-		second_angle = (3*PI/2) % (2*PI);
-		set_time = true;
-	}
-	background(86, 99, 163);
+const drawUI = function(){
+	background(86, 99, 163); // muted indigo, periwinkle blue
 	textSize(12);
-	fill(240, 126, 65);
+	fill(240, 126, 65); // warm orange, pumpkin, burnt orange
 	text('Second: ' + time_second, 10, 20);
 	text('Minute: ' + minute(), 10, 40);
-	text('Hour: ' + (hour()%12), 10, 60);
+	text('Hour: ' + (hour() % 12), 10, 60);
 	text('M Angle: ' + minute_angle, 10, 80);
 	text('H Angle: ' + hour_angle, 10, 100);
 	text('S Angle: ' + second_angle, 10, 120);
@@ -144,32 +66,52 @@ var draw = function(){
 	text('3', 360, 208);
 	text('6', 192, 375);
 	text('9', 25, 208);
-	strokeWeight(20);
-	stroke(240, 126, 65);
-	var minute_coords = PolarPoint(
-		minute_radius,
-		minute_angle
-	);
-	line(200, 200, minute_coords.getX+center, minute_coords.getY+center);
-	stroke(207, 62, 29);
-	var hour_coords = PolarPoint(
-		hour_radius,
-		hour_angle
-	);
-	line(200, 200, hour_coords.getX+center, hour_coords.getY+center);
-	strokeWeight(2);
-	stroke(0, 0, 0);
-	var second_coords = PolarPoint(
-		second_radius,
-		second_angle
-	);
-	line(200, 200, second_coords.getX+center, second_coords.getY+center);
+};
+
+// Draw a clock hand adjusted for stroke thickness so the visible hand
+// starts exactly at the center and ends exactly at the target radius.
+const drawHand = function(centerXY, radius, angle, thickness, strokeColor){
+	const ux = cos(angle), uy = sin(angle);
+	const half = thickness / 2;
+	const startX = centerXY + ux * half;
+	const startY = centerXY + uy * half;
+	const endX = centerXY + ux * (radius - half);
+	const endY = centerXY + uy * (radius - half);
+	strokeWeight(thickness);
+	if (Array.isArray(strokeColor)) {
+		stroke(strokeColor[0], strokeColor[1], strokeColor[2]);
+	} else {
+		stroke(strokeColor);
+	}
+	line(startX, startY, endX, endY);
+};
+
+const calculateAngles = function(){
+	const s = second();
+	const m = minute();
+	const h = hour() % 12;
+	time_second = s;
+	// Top (12 o'clock) is 3 * PI / 2. Advance each hand proportionally.
+	second_angle = (3 * HALF_PI + s * second_interval) % TWO_PI;
+	minute_angle = (3 * HALF_PI + (m * 60 + s) * minute_interval) % TWO_PI;
+	hour_angle   = (3 * HALF_PI + ((h * 3600) + (m * 60) + s) * hour_interval) % TWO_PI;
+};
+
+var draw = function(){
+	calculateAngles();
+	drawUI();
+	// Minute hand (warm orange, pumpkin, burnt orange)
+	drawHand(center, minute_radius, minute_angle, 20, [240, 126, 65]);
+	// Hour hand (vivid red‑orange)
+	drawHand(center, hour_radius, hour_angle, 20, [207, 62, 29]);
+	// Second hand (black)
+	drawHand(center, second_radius, second_angle, 2, [0, 0, 0]);
 };
 
 window.onload = function(){
 	window.canvas = new Canvas(document.getElementById("canvas1"));
 	window.ctx = canvas.ctx;
-	canvas.draw = window.draw;
+	canvas.draw = throttle(window.draw, 1000);
 	canvas.run();
 };
 </script>
