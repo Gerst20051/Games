@@ -69,18 +69,19 @@ const drawUI = function(layout){
 // starts exactly at the center and ends exactly at the target radius.
 const drawHand = function(centerX, centerY, radius, angle, thickness, strokeColor){
 	const ux = cos(angle), uy = sin(angle);
-	const half = thickness / 2;
-	const startX = centerX + ux * half;
-	const startY = centerY + uy * half;
-	const endX = centerX + ux * (radius - half);
-	const endY = centerY + uy * (radius - half);
 	strokeWeight(thickness);
+	const startX = centerX + ux * c.lineWidthHalf;
+	const startY = centerY + uy * c.lineWidthHalf;
+	const endX = centerX + ux * (radius - c.lineWidthHalf);
+	const endY = centerY + uy * (radius - c.lineWidthHalf);
 	if (Array.isArray(strokeColor)) {
 		stroke(strokeColor[0], strokeColor[1], strokeColor[2]);
 	} else {
 		stroke(strokeColor);
 	}
-	line(startX, startY, endX, endY);
+	// Compensate for line() adding c.O + c.lineWidthHalf to x and y
+	const offset = c.O + c.lineWidthHalf;
+	line(startX - offset, startY - offset, endX - offset, endY - offset);
 };
 
 const computeLayout = function(){
