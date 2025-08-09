@@ -415,6 +415,8 @@ var Pacman = function () {
         if (this.active && (this.dir !== NO_DIRECTION || this.nextDir !== NO_DIRECTION)) {
             // var nearGameObjects = this.getNearGameObjectsOfType(GHOST);
             var nearBlockTypes = this.getNearBlockTypes();
+            //  NOTE: getNearBlockTypes() returns an array of block types in the order of LEFT, UP, RIGHT, DOWN -> 0, 1, 2, 3
+            //  so we can use the index to get the block type for the direction
             var directionLookup = {
                 '-1': 0,
                 '-2': 1,
@@ -495,7 +497,7 @@ var Ghost = function (ghostType) {
     this.x = spawnCoordinate[0];
     this.y = spawnCoordinate[1];
 
-    // TODO: fix this what was it for?
+    // TODO: implement ghost specific behavior
     // if (ghostType === RED) {
     //     this.x = ;
     //     this.y = ;
@@ -517,6 +519,7 @@ var Ghost = function (ghostType) {
     this.releaseDelayInSeconds = randomDouble(1.5, 6);
     this.released = false;
     this.exiting = false;
+    this.hasExitedCage = false;
     this.doorBlock = getDoorBlockIndex();
 
     this.run = function () {
@@ -548,6 +551,7 @@ var Ghost = function (ghostType) {
                 var currentMaze = mazes[currentMazeLevel];
                 if (currentMaze[currentBlock[0]] && currentMaze[currentBlock[0]][currentBlock[1]] === PATH) {
                     this.exiting = false;
+                    this.hasExitedCage = true;
                 }
             }
             this.setBlackEyeOffset();
@@ -597,12 +601,35 @@ var Ghost = function (ghostType) {
     };
 
     this.chooseRandomDirection = function () {
-        var possibleDirections = [LEFT, UP, RIGHT, DOWN],
+        var possibleDirections = [LEFT, UP, RIGHT, DOWN];
+        var nearBlockTypes = this.getNearBlockTypes();
+        var currentBlockCoords = getBlockFromGameObject(this);
+        var currentMaze = mazes[currentMazeLevel];
+        var currentTileType = currentMaze[currentBlockCoords[0]] && currentMaze[currentBlockCoords[0]][currentBlockCoords[1]];
+        //  NOTE: getNearBlockTypes() returns an array of block types in the order of LEFT, UP, RIGHT, DOWN -> 0, 1, 2, 3
+        //  so we can use the index to get the block type for the direction
+        var directionLookup = { '-1': 0, '-2': 1, '1': 2, '2': 3 };
+
+        var isOpposite = function (a, b) { return a + b === 0; };
+
+        // filter out blocked directions up front
+        possibleDirections = possibleDirections.filter(function (dir) {
+            var idx = directionLookup[dir];
+            var targetType = nearBlockTypes[idx];
+            if (targetType === WALL) return false;
+            if (targetType === DOOR && (!this.released || this.hasExitedCage)) return false;
+            if (targetType === CAGE && (this.hasExitedCage || currentTileType !== CAGE)) return false;
+            return true;
+        }.bind(this));
+
+        // avoid immediate reversal when possible
+        var nonReverse = possibleDirections.filter(function (d) { return !isOpposite(d, this.prevDir); }.bind(this));
+        var candidates = nonReverse.length ? nonReverse : possibleDirections;
+
+        var newDirection = candidates.length ? randomElement(candidates) : this.prevDir;
+        if (!newDirection) {
             newDirection = NO_DIRECTION;
-        newDirection = randomElement(possibleDirections);
-        // do {
-        //      newDirection = randomElement(possibleDirections);
-        // } while (newDirection === this.prevDir && ); // TODO
+        }
         this.dir = newDirection;
         this.prevDir = newDirection;
     };
@@ -626,18 +653,24 @@ var Ghost = function (ghostType) {
         if (this.active) {
             // var nearGameObjects = this.getNearGameObjectsOfType(GHOST);
             var nearBlockTypes = this.getNearBlockTypes();
+            var currentBlockCoords = getBlockFromGameObject(this);
+            var currentMaze = mazes[currentMazeLevel];
+            var currentTileType = currentMaze[currentBlockCoords[0]] && currentMaze[currentBlockCoords[0]][currentBlockCoords[1]];
             var directionLookup = {
-                '-1': 0,
-                '-2': 1,
-                '1': 2,
-                '2': 3
+                '-1': 0, // LEFT
+                '-2': 1, // UP
+                '1': 2, // RIGHT
+                '2': 3 // DOWN
             };
             var currentDirectionIndex = directionLookup[this.dir];
             if (-1 < currentDirectionIndex) {
                 if (
                     nearBlockTypes[currentDirectionIndex] === WALL ||
-                    (nearBlockTypes[currentDirectionIndex] === DOOR && !this.released)
-                ) { // treat door as closed until released
+                    // treat door as closed until released; and always closed once exited
+                    (nearBlockTypes[currentDirectionIndex] === DOOR && (!this.released || this.hasExitedCage)) ||
+                    // never allow moving from outside into cage; inside the cage during exit is allowed
+                    (nearBlockTypes[currentDirectionIndex] === CAGE && (this.hasExitedCage || currentTileType !== CAGE))
+                ) {
                     this.dir = NO_DIRECTION;
                     this.moveToCenterOfCurrentBlock();
                     return;
@@ -706,7 +739,7 @@ var GameLevel = function () {
     var voidColor = randomGoldenRatioColor();
     var wallColor = randomGoldenRatioColor();
     var pathColor = randomGoldenRatioColor();
-    var homeColor = randomGoldenRatioColor();
+    var cageColor = randomGoldenRatioColor();
     var doorColor = randomGoldenRatioColor();
 
     this.draw = function () {
@@ -721,7 +754,7 @@ var GameLevel = function () {
                 } else if (currentMaze[rowIndex][blockIndex] === PATH) {
                     fill(pathColor);
                 } else if (currentMaze[rowIndex][blockIndex] === CAGE) {
-                    fill(homeColor);
+                    fill(cageColor);
                 } else if (currentMaze[rowIndex][blockIndex] === DOOR) {
                     fill(doorColor);
                 }
@@ -757,6 +790,7 @@ var GameOverScreen = function () {
             alpha(1.0);
             textSize(100);
             fill(colors.black);
+            // TODO: fix text for mobile devices
             text('GAME OVER', 100, maxHeight / 2);
         }
     };
@@ -772,6 +806,7 @@ var WonScreen = function () {
             alpha(1.0);
             textSize(100);
             fill(colors.black);
+            // TODO: fix text for mobile devices
             text('LEVEL WON!!', 100, maxHeight / 2);
         }
     };
