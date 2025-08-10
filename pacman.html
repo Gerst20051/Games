@@ -189,16 +189,16 @@ var level_2 = {
 		[ WALL, PATH, WALL, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, WALL, PATH, WALL, PATH, PATH, PATH, WALL, PATH, PATH, PATH, WALL, PATH, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
-		[ WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL ],
-		[ WALL, PATH, WALL, PATH, PATH, PATH, WALL, PATH, PATH, PATH, WALL, CAGE, CAGE, DOOR, CAGE, CAGE, CAGE, WALL, WALL, PATH, PATH, PATH, WALL, PATH, PATH, WALL, PATH, WALL ],
+		[ WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, DOOR, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL ],
+		[ WALL, PATH, WALL, PATH, PATH, PATH, WALL, PATH, PATH, PATH, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, WALL, PATH, PATH, PATH, PATH, PATH, PATH, WALL, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL ],
-		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, PATH, WALL ],
+		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, PATH, PATH, WALL, PATH, WALL, WALL, WALL, PATH, WALL, PATH, PATH, PATH, WALL, PATH, WALL, PATH, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL ],
-		[ WALL, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
+		[ WALL, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, PATH, PATH, PATH, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, PATH, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, PATH, WALL, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, PATH, WALL, WALL, WALL, PATH, WALL, WALL, WALL, PATH, WALL, WALL, WALL, PATH, WALL, WALL, WALL, PATH, WALL, WALL, WALL, PATH, WALL, PATH, PATH, WALL ],
@@ -679,6 +679,10 @@ var Ghost = function (ghostType) {
 	this.hasExitedCage = false;
 	this.doorBlock = getDoorBlockIndex();
 
+	// periodic random direction changes
+	this.lastDirectionChangeTimeInSeconds = timeSeconds();
+	this.directionChangeIntervalInSeconds = randomDouble(1.5, 3.5);
+
 	this.run = function () {
 		if (this.active && !levelWon && !gameOver) {
 			if (this.frightened) {
@@ -700,6 +704,12 @@ var Ghost = function (ghostType) {
 			} else if (this.dir === NO_DIRECTION) {
 				this.chooseRandomDirection();
 			}
+
+			// periodic random direction change when centered on a tile
+			if (!this.exiting) {
+				this.randomDirectionChangeTick();
+			}
+
 			this.move();
 
 			// once we've made it to the path outside, stop exiting behavior
@@ -711,6 +721,7 @@ var Ghost = function (ghostType) {
 					this.hasExitedCage = true;
 				}
 			}
+
 			this.setBlackEyeOffset();
 		}
 	};
@@ -804,6 +815,21 @@ var Ghost = function (ghostType) {
 			this.dir = UP;
 		}
 		this.prevDir = this.dir;
+	};
+
+	this.isAtBlockCenter = function () {
+		var center = getCenterCoordinatesFromBlockIndex.apply(null, getBlockFromGameObject(this));
+		return (abs(this.x - center[0]) <= this.speed) && (abs(this.y - center[1]) <= this.speed);
+	};
+
+	this.randomDirectionChangeTick = function () {
+		if (this.isAtBlockCenter()) {
+			if (this.directionChangeIntervalInSeconds <= diff(this.lastDirectionChangeTimeInSeconds, timeSeconds())) {
+				this.chooseRandomDirection();
+				this.lastDirectionChangeTimeInSeconds = timeSeconds();
+				this.directionChangeIntervalInSeconds = randomDouble(1.5, 3.5);
+			}
+		}
 	};
 
 	this.move = function () {
@@ -1175,7 +1201,11 @@ mouseClicked = function () {
 		levelWon = false;
 	}
 	if (levelWon) {
-		currentMazeLevel++;
+		if (currentMazeLevel < mazes.length - 1) {
+			currentMazeLevel++;
+		} else {
+			currentMazeLevel = 0;
+		}
 		if (food[currentMazeLevel].length === 0) {
 			food[currentMazeLevel] = getCoordinatesOfType(PATH);
 		}
