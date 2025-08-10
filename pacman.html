@@ -71,9 +71,10 @@ var gameObjects = [],
 var VOID = 0,
 	WALL = 1,
 	PATH = 2,
-	CAGE = 3,
-	DOOR = 4,
-	PORT = 5; // TUNNEL
+	PASS = 3, // PASSAGE (NO FOOD)
+	CAGE = 4,
+	DOOR = 5,
+	PORT = 6; // TUNNEL
 
 // object types
 var PACMAN = 1,
@@ -140,17 +141,17 @@ var level_1 = {
 		[ WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL ],
 		[ WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL ],
 		[ WALL, PATH, PATH, PATH, PATH, PATH, PATH, WALL, WALL, PATH, PATH, PATH, PATH, WALL, WALL, PATH, PATH, PATH, PATH, WALL, WALL, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
-		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
-		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
-		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
-		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, DOOR, DOOR, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
-		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
-		[ PORT, PORT, PORT, PORT, PORT, PORT, PATH, PATH, PATH, PATH, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PATH, PATH, PATH, PATH, PORT, PORT, PORT, PORT, PORT, PORT ],
-		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
-		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
-		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
-		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
-		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
+		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PASS, WALL, WALL, PASS, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
+		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PASS, WALL, WALL, PASS, WALL, WALL, WALL, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
+		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
+		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, WALL, WALL, WALL, DOOR, DOOR, WALL, WALL, WALL, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
+		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
+		[ PORT, PORT, PORT, PORT, PORT, PORT, PATH, PASS, PASS, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, PASS, PASS, PATH, PORT, PORT, PORT, PORT, PORT, PORT ],
+		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
+		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
+		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
+		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
+		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PASS, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PASS, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
 		[ WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL, WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL ],
 		[ WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, WALL, WALL, PATH, WALL ],
@@ -163,7 +164,13 @@ var level_1 = {
 		[ WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
 		[ WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL ],
 	],
-	pills: [],
+	pills: [
+		// [row, column]
+		[3, 1],
+		[3, 26],
+		[23, 1],
+		[23, 26]
+	],
 	food: []
 };
 
@@ -218,6 +225,8 @@ var mazes = [
 	level_2.maze
 ];
 
+level_1.food = getCoordinatesOfType(PATH);
+
 var pills = [
 	level_0.pills,
 	level_1.pills,
@@ -253,29 +262,42 @@ function getBlockDimensions() {
 
 function getBlockFromCoordinates(x, y) {
 	var rowIndex = floor(y / blockHeight);
-	var blockIndex = floor(x / blockWidth);
-	return [rowIndex, blockIndex];
+	var columnIndex = floor(x / blockWidth);
+	return [rowIndex, columnIndex];
 }
 
 function getBlockFromGameObject(gameObject) {
 	return getBlockFromCoordinates(gameObject.getX(), gameObject.getY());
 }
 
-function getCoordinatesFromBlockIndex(rowIndex, blockIndex) {
-	return [blockWidth * blockIndex, blockHeight * rowIndex];
+function getCoordinatesFromBlockIndex(rowIndex, columnIndex) {
+	return [blockWidth * columnIndex, blockHeight * rowIndex];
 }
 
-function getCenterCoordinatesFromBlockIndex(rowIndex, blockIndex) {
-	return [blockWidth * blockIndex + blockWidth / 2, blockHeight * rowIndex + blockHeight / 2];
+function getCenterCoordinatesFromBlockIndex(rowIndex, columnIndex) {
+	return [blockWidth * columnIndex + blockWidth / 2, blockHeight * rowIndex + blockHeight / 2];
+}
+
+function getCoordinatesOfType(blockType) {
+	var eligibleBlocks = [];
+	var currentMaze = mazes[currentMazeLevel];
+	currentMaze.forEach(function (levelRow, rowIndex) {
+		levelRow.forEach(function (rowBlock, columnIndex) {
+			if (rowBlock === blockType) {
+				eligibleBlocks.push([rowIndex, columnIndex]);
+			}
+		});
+	});
+	return eligibleBlocks;
 }
 
 function getRandomCoordinateOfType(blockType) {
 	var eligibleBlocks = [];
 	var currentMaze = mazes[currentMazeLevel];
 	currentMaze.forEach(function (levelRow, rowIndex) {
-		levelRow.forEach(function (rowBlock, blockIndex) {
+		levelRow.forEach(function (rowBlock, columnIndex) {
 			if (rowBlock === blockType) {
-				eligibleBlocks.push([rowIndex, blockIndex]);
+				eligibleBlocks.push([rowIndex, columnIndex]);
 			}
 		});
 	});
@@ -292,7 +314,7 @@ function getRealCoordinateToSpawnPacman() {
 	var block = getBlockFromCoordinates.apply(null, getRandomCoordinateOfType(DOOR));
 	var currentMaze = mazes[currentMazeLevel];
 	for (var i = block[0]; i < currentMaze.length; i++) {
-		if (currentMaze[i][block[1]] === PATH) {
+		if (currentMaze[i][block[1]] === PASS || currentMaze[i][block[1]] === PATH) {
 			return getCenterCoordinatesFromBlockIndex(i, block[1]);
 		}
 	}
@@ -300,7 +322,7 @@ function getRealCoordinateToSpawnPacman() {
 }
 
 function getRandomCoordinateToSpawnPacman() {
-	return getRandomCoordinateOfType(PATH);
+	return getRandomCoordinateOfType(PASS) || getRandomCoordinateOfType(PATH);
 }
 
 function getRandomCoordinateToSpawnGhost() {
@@ -514,7 +536,7 @@ var Pacman = function () {
 			};
 			var nextDirectionIndex = directionLookup[this.nextDir];
 			if (-1 < nextDirectionIndex) {
-				if (nearBlockTypes[nextDirectionIndex] === PATH && this.nextDir !== NO_DIRECTION) {
+				if ((nearBlockTypes[nextDirectionIndex] === PATH || nearBlockTypes[nextDirectionIndex] === PASS) && this.nextDir !== NO_DIRECTION) {
 					this.dir = this.nextDir;
 					this.nextDir = NO_DIRECTION;
 				}
@@ -643,7 +665,7 @@ var Ghost = function (ghostType) {
 			if (this.exiting) {
 				var currentBlock = getBlockFromGameObject(this);
 				var currentMaze = mazes[currentMazeLevel];
-				if (currentMaze[currentBlock[0]] && currentMaze[currentBlock[0]][currentBlock[1]] === PATH) {
+				if (currentMaze[currentBlock[0]] && (currentMaze[currentBlock[0]][currentBlock[1]] === PASS || currentMaze[currentBlock[0]][currentBlock[1]] === PATH)) {
 					this.exiting = false;
 					this.hasExitedCage = true;
 				}
@@ -841,21 +863,21 @@ var GameLevel = function () {
 		noStroke();
 		var currentMaze = mazes[currentMazeLevel];
 		currentMaze.forEach(function (levelRow, rowIndex) {
-			levelRow.forEach(function (rowBlock, blockIndex) {
-				if (currentMaze[rowIndex][blockIndex] === VOID) {
+			levelRow.forEach(function (rowBlock, columnIndex) {
+				if (currentMaze[rowIndex][columnIndex] === VOID) {
 					fill(voidColor);
-				} else if (currentMaze[rowIndex][blockIndex] === WALL) {
+				} else if (currentMaze[rowIndex][columnIndex] === WALL) {
 					fill(wallColor);
-				} else if (currentMaze[rowIndex][blockIndex] === PATH) {
+				} else if (currentMaze[rowIndex][columnIndex] === PATH || currentMaze[rowIndex][columnIndex] === PASS) {
 					fill(pathColor);
-				} else if (currentMaze[rowIndex][blockIndex] === CAGE) {
+				} else if (currentMaze[rowIndex][columnIndex] === CAGE) {
 					fill(cageColor);
-				} else if (currentMaze[rowIndex][blockIndex] === DOOR) {
+				} else if (currentMaze[rowIndex][columnIndex] === DOOR) {
 					fill(doorColor);
-				} else if (currentMaze[rowIndex][blockIndex] === PORT) {
+				} else if (currentMaze[rowIndex][columnIndex] === PORT) {
 					fill(portColor);
 				}
-				var blockCoordinates = getCoordinatesFromBlockIndex(rowIndex, blockIndex);
+				var blockCoordinates = getCoordinatesFromBlockIndex(rowIndex, columnIndex);
 				rect(blockCoordinates[0], blockCoordinates[1], blockWidth + 1, blockHeight + 1);
 			});
 		});
