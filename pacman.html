@@ -225,8 +225,6 @@ var mazes = [
 	level_2.maze
 ];
 
-level_1.food = getCoordinatesOfType(PATH);
-
 var pills = [
 	level_0.pills,
 	level_1.pills,
@@ -1135,6 +1133,9 @@ mouseClicked = function () {
 	}
 	if (levelWon) {
 		currentMazeLevel++;
+		if (food[currentMazeLevel].length === 0) {
+			food[currentMazeLevel] = getCoordinatesOfType(PATH);
+		}
 		getBlockDimensions();
 		mainScene.init();
 		levelWon = false;
