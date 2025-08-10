@@ -146,7 +146,7 @@ var level_1 = {
 		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
 		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, WALL, WALL, WALL, DOOR, DOOR, WALL, WALL, WALL, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
 		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
-		[ PORT, PORT, PORT, PORT, PORT, PORT, PATH, PASS, PASS, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, PASS, PASS, PATH, PORT, PORT, PORT, PORT, PORT, PORT ],
+		[ PORT, PASS, PASS, PASS, PASS, PASS, PATH, PASS, PASS, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, PASS, PASS, PATH, PASS, PASS, PASS, PASS, PASS, PORT ],
 		[ WALL, WALL, WALL, WALL, WALL, WALL, PATH, WALL, WALL, PASS, WALL, CAGE, CAGE, CAGE, CAGE, CAGE, CAGE, WALL, PASS, WALL, WALL, PATH, WALL, WALL, WALL, WALL, WALL, WALL ],
 		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
 		[ VOID, VOID, VOID, VOID, VOID, WALL, PATH, WALL, WALL, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, PASS, WALL, WALL, PATH, WALL, VOID, VOID, VOID, VOID, VOID ],
@@ -327,6 +327,35 @@ function getRandomCoordinateToSpawnGhost() {
 	return getRandomCoordinateOfType(CAGE);
 }
 
+function getOppositePortCenterCoordinates(currentRow, currentCol) {
+	var ports = getCoordinatesOfType(PORT);
+	if (ports.length < 2) {
+		return null;
+	}
+	// Prefer a matching tunnel exit in the same row, farthest by column
+	var sameRowPorts = ports.filter(function (p) { return p[0] === currentRow && !(p[0] === currentRow && p[1] === currentCol); });
+	var target;
+	if (sameRowPorts.length) {
+		target = sameRowPorts.reduce(function (best, p) {
+			return (!best || Math.abs(p[1] - currentCol) > Math.abs(best[1] - currentCol)) ? p : best;
+		}, null);
+	}
+	// Fallback: choose the farthest by column among all ports
+	if (!target) {
+		target = ports.reduce(function (best, p) {
+			if (p[0] === currentRow && p[1] === currentCol) return best;
+			return (!best || Math.abs(p[1] - currentCol) > Math.abs(best[1] - currentCol)) ? p : best;
+		}, null);
+	}
+	if (!target) {
+		// mirror across the maze width as a last resort
+		var currentMaze = mazes[currentMazeLevel];
+		var lastCol = currentMaze[0].length - 1;
+		target = [currentRow, lastCol - currentCol];
+	}
+	return getCenterCoordinatesFromBlockIndex(target[0], target[1]);
+}
+
 function getDoorBlockIndex() {
 	var doorCoordinate = getRandomCoordinateOfType(DOOR);
 	return getBlockFromCoordinates.apply(null, doorCoordinate);
@@ -486,6 +515,7 @@ var Pacman = function () {
 	this.mouthRadiusIncrement = 1;
 	this.maxMouthRadius = 4;
 	this.minMouthRadius = 25;
+	this.teleportLocked = false; // prevents immediate re-teleport while on PORT tile
 
 	this.init = function (x, y) {
 		this.setPosition(x, y);
@@ -534,7 +564,7 @@ var Pacman = function () {
 			};
 			var nextDirectionIndex = directionLookup[this.nextDir];
 			if (-1 < nextDirectionIndex) {
-				if ((nearBlockTypes[nextDirectionIndex] === PATH || nearBlockTypes[nextDirectionIndex] === PASS) && this.nextDir !== NO_DIRECTION) {
+				if ((nearBlockTypes[nextDirectionIndex] === PATH || nearBlockTypes[nextDirectionIndex] === PASS || nearBlockTypes[nextDirectionIndex] === PORT) && this.nextDir !== NO_DIRECTION) {
 					this.dir = this.nextDir;
 					this.nextDir = NO_DIRECTION;
 				}
@@ -562,6 +592,22 @@ var Pacman = function () {
 					this.y -= this.speed;
 				}
 				this.x = centerCoordinates[0];
+			}
+
+			// Handle teleport on PORT tiles (tunnels)
+			var currentBlock = getBlockFromGameObject(this);
+			var tile = mazes[currentMazeLevel][currentBlock[0]] && mazes[currentMazeLevel][currentBlock[0]][currentBlock[1]];
+			if (tile === PORT) {
+				if (!this.teleportLocked) {
+					var dest = getOppositePortCenterCoordinates(currentBlock[0], currentBlock[1]);
+					if (dest) {
+						this.setPosition(dest[0], dest[1]);
+						this.teleportLocked = true;
+					}
+				}
+			} else {
+				// unlock when we leave PORT tiles
+				this.teleportLocked = false;
 			}
 		}
 		return hasMoved;
@@ -855,7 +901,6 @@ var GameLevel = function () {
 	var pathColor = randomGoldenRatioColor();
 	var cageColor = randomGoldenRatioColor();
 	var doorColor = randomGoldenRatioColor();
-	var portColor = randomGoldenRatioColor();
 
 	this.draw = function () {
 		noStroke();
@@ -866,14 +911,12 @@ var GameLevel = function () {
 					fill(voidColor);
 				} else if (currentMaze[rowIndex][columnIndex] === WALL) {
 					fill(wallColor);
-				} else if (currentMaze[rowIndex][columnIndex] === PATH || currentMaze[rowIndex][columnIndex] === PASS) {
+				} else if ([PATH, PASS, PORT].includes(currentMaze[rowIndex][columnIndex])) {
 					fill(pathColor);
 				} else if (currentMaze[rowIndex][columnIndex] === CAGE) {
 					fill(cageColor);
 				} else if (currentMaze[rowIndex][columnIndex] === DOOR) {
 					fill(doorColor);
-				} else if (currentMaze[rowIndex][columnIndex] === PORT) {
-					fill(portColor);
 				}
 				var blockCoordinates = getCoordinatesFromBlockIndex(rowIndex, columnIndex);
 				rect(blockCoordinates[0], blockCoordinates[1], blockWidth + 1, blockHeight + 1);
