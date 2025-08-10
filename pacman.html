@@ -65,7 +65,8 @@ var gameObjects = [],
 	initialTouchX = 0,
 	initialTouchY = 0,
 	finalTouchX = 0,
-	finalTouchY = 0;
+	finalTouchY = 0,
+	pendingGhostRespawns = [];
 
 // block types
 var VOID = 0,
@@ -247,6 +248,21 @@ function collideBlock(obj1, obj2) {
 		return true;
 	}
 	return false;
+}
+
+function scheduleGhostRespawn(ghostType, delaySeconds) {
+	pendingGhostRespawns.push({ ghostType, at: timeSeconds() + (delaySeconds || 3) });
+}
+
+function processGhostRespawns() {
+	if (!pendingGhostRespawns.length) return;
+	var now = timeSeconds();
+	for (var i = pendingGhostRespawns.length; i--;) {
+		if (pendingGhostRespawns[i].at <= now) {
+			gameObjects.push(new Ghost(pendingGhostRespawns[i].ghostType));
+			pendingGhostRespawns.splice(i, 1);
+		}
+	}
 }
 
 function getBlockDimensions() {
@@ -1108,6 +1124,8 @@ var Scene = function () {
 			if (collideBlock(pacman, ghosts[i])) {
 				if (ghosts[i].isFrightened()) {
 					ghosts[i].kill();
+					eatenGhosts++;
+					scheduleGhostRespawn(ghosts[i].ghostType, 3);
 				} else {
 					this.gameOver();
 				}
@@ -1160,6 +1178,7 @@ var draw = function () {
 		checkFood();
 	}
 	checkGameObjects();
+	processGhostRespawns();
 	monitorKeys();
 	gameObjects.forEach(function (obj) {
 		obj.active && obj.run && obj.run();
