@@ -84,9 +84,9 @@ var PACMAN = 1,
 	PILL = 4;
 
 // ghost types
-var RED = 1, // shadow / blinky
-	PINK = 2, // speedy / pinky
-	BLUE = 3, // bashful / inky
+var RED = 1,    // shadow / blinky
+	PINK = 2,   // speedy / pinky
+	BLUE = 3,   // bashful / inky
 	ORANGE = 4; // inky / clyde
 
 var ghostRankings = [
@@ -95,6 +95,13 @@ var ghostRankings = [
 	BLUE,
 	ORANGE
 ];
+
+var ghostExitDelay = {
+	[RED]: 0,    // leaves first
+	[PINK]: 2,   // slight delay
+	[BLUE]: 4,   // moderate delay
+	[ORANGE]: 6, // longest delay
+};
 
 // movement directions
 var NO_DIRECTION = 0,
@@ -105,7 +112,6 @@ var NO_DIRECTION = 0,
 
 var level_0 = {
 	maze: [
-		// [ VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID ],
 		[ WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL ],
 		[ WALL, PATH, PATH, PATH, PATH, PATH, PATH, PATH, WALL ],
 		[ WALL, PATH, WALL, WALL, DOOR, WALL, WALL, PATH, WALL ],
@@ -116,12 +122,14 @@ var level_0 = {
 		[ WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL ]
 	],
 	pills: [
+		// [row, column]
 		[1, 1],
 		[1, 7],
 		[6, 1],
 		[6, 7]
 	],
 	food: [
+		// [row, column]
 		[1, 4],
 		[3, 1],
 		[3, 7],
@@ -209,6 +217,7 @@ var level_2 = {
 		[ WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL ]
 	],
 	pills: [
+		// [row, column]
 		[1, 1],
 		[1, 26],
 		[28, 1],
@@ -694,7 +703,8 @@ var Ghost = function (ghostType) {
 
 	// cage release control
 	this.spawnTimeInSeconds = timeSeconds();
-	this.releaseDelayInSeconds = randomDouble(1.5, 6);
+	// stagger by ghost type plus small random jitter so exits are distinct
+	this.releaseDelayInSeconds = ghostExitDelay[this.ghostType] + randomDouble(0.75, 1.75);
 	this.released = false;
 	this.exiting = false;
 	this.hasExitedCage = false;
