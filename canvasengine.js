@@ -1123,6 +1123,13 @@ rotate = function(array, delay){ // rotate the values in an array at the provide
 		clearInterval(intervalId);
 	};
 },
+shuffle = function(array){ // shuffle the values in an array
+	for (let i = array.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[array[i], array[j]] = [array[j], array[i]];
+	}
+	return array;
+},
 /* Function */
 debounce = function(func, timeout = 1E3){ // only call a function once within the timeout if called multiple times
 	let timer;

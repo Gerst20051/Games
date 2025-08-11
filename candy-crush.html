@@ -80,11 +80,11 @@ class Block {
         'images/emeralds/sapphire.png',
     ];
 
-    constructor(board, index) {
+    constructor(board, index, type) {
         this.board = board;
         this.index = index;
+        this.type = type;
         this.computeCoordinates();
-        this.type = randomElement(Block.types);
     }
 
     computeCoordinates() {
@@ -104,6 +104,8 @@ class Block {
 }
 
 class Board {
+    numberOfBlockTypes = 4;
+    blockTypes = shuffle(Block.types).slice(0, this.numberOfBlockTypes);
     blocks = [];
     gridIndex = 2;
 
@@ -127,9 +129,10 @@ class Board {
     }
 
     buildBlocks() {
+        this.blocks = [];
         const numberOfBlocks = this.grid.length * this.grid.length;
         for (let i = 0; i < numberOfBlocks; i++) {
-            this.blocks.push(new Block(this, i));
+            this.blocks.push(new Block(this, i, randomElement(this.blockTypes)));
         }
     }
 
@@ -312,9 +315,14 @@ class Game {
         ) {
             if (this.areBlocksAdjacent(this.dragState.startBlock, this.dragState.currentBlock)) {
                 this.swapBlocks(this.dragState.startBlock, this.dragState.currentBlock);
-                const matches = this.findMatches();
-                if (matches.size > 0) {
-                    this.applyMatches(matches);
+                let matches = this.findMatches();
+                if (matches.size === 0) {
+                    this.swapBlocks(this.dragState.startBlock, this.dragState.currentBlock);
+                } else {
+                    while (matches.size > 0) {
+                        this.applyMatches(matches);
+                        matches = this.findMatches();
+                    }
                 }
             }
         }
@@ -413,8 +421,6 @@ var orientationChanged = function() {
 };
 
 // TODO: Missing Features
-// - loop detection to handle cascades
-// - revert swaps with no matches
 // - score calculation
 // - animation
 // - sound
