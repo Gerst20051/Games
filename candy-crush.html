@@ -401,11 +401,11 @@ function mouseReleased() {
 }
 
 function touchStart() {
-    window.game.startDrag(mouseX, mouseY);
+    window.game.startDrag(initialTouchX, initialTouchY);
 }
 
 function touchMoved() {
-    window.game.updateDrag(mouseX, mouseY);
+    window.game.updateDrag(touchesList[0].pageX, touchesList[0].pageY);
 }
 
 function touchEnd() {
