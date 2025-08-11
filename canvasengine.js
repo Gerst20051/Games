@@ -752,7 +752,7 @@ randomPercentage = function(threshold){ // return a boolean based on a threshold
 	return random(0, 100) < threshold;
 },
 randomDouble = function(low, high){ // generate a random double
-	if (arguments.length === 0) {
+	if (arguments.length === 0) { // between 0 (inclusive) and 1 (exclusive)
 		return Math.random();
 	}
 	return Math.random() * (high - low) + low;

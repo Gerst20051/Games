@@ -1,0 +1,179 @@
+<!--
+ ::::::::  :::::::::  ::::::::::     ::: ::::::::::: :::::::::: :::::::::       :::::::::  :::   :::                               
+:+:    :+: :+:    :+: :+:          :+: :+:   :+:     :+:        :+:    :+:      :+:    :+: :+:   :+: :+:                           
++:+        +:+    +:+ +:+         +:+   +:+  +:+     +:+        +:+    +:+      +:+    +:+  +:+ +:+                                
++#+        +#++:++#:  +#++:++#   +#++:++#++: +#+     +#++:++#   +#+    +:+      +#++:++#+    +#++:                                 
++#+        +#+    +#+ +#+        +#+     +#+ +#+     +#+        +#+    +#+      +#+    +#+    +#+                                  
+#+#    #+# #+#    #+# #+#        #+#     #+# #+#     #+#        #+#    #+#      #+#    #+#    #+#    #+#                           
+ ########  ###    ### ########## ###     ### ###     ########## #########       #########     ###                                  
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                   
+    :::     ::::    ::: :::::::::  :::::::::  :::::::::: :::       :::       ::::::::  :::::::::: :::::::::   :::::::: ::::::::::: 
+  :+: :+:   :+:+:   :+: :+:    :+: :+:    :+: :+:        :+:       :+:      :+:    :+: :+:        :+:    :+: :+:    :+:    :+:     
+ +:+   +:+  :+:+:+  +:+ +:+    +:+ +:+    +:+ +:+        +:+       +:+      +:+        +:+        +:+    +:+ +:+           +:+     
++#++:++#++: +#+ +:+ +#+ +#+    +:+ +#++:++#:  +#++:++#   +#+  +:+  +#+      :#:        +#++:++#   +#++:++#:  +#++:++#++    +#+     
++#+     +#+ +#+  +#+#+# +#+    +#+ +#+    +#+ +#+        +#+ +#+#+ +#+      +#+   +#+# +#+        +#+    +#+        +#+    +#+     
+#+#     #+# #+#   #+#+# #+#    #+# #+#    #+# #+#         #+#+# #+#+#       #+#    #+# #+#        #+#    #+# #+#    #+#    #+#     
+###     ### ###    #### #########  ###    ### ##########   ###   ###         ########  ########## ###    ###  ########     ###     
+-->
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Game (via Canvas Engine)</title>
+<script src="canvasengine.js"></script>
+<style>
+body {
+	margin: 0;
+	padding: 0;
+}
+
+#canvaspane {
+	cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="content">
+<div id="canvaspane">
+<canvas id="canvas1" width="100" height="100"></canvas>
+</div>
+</div>
+<script>
+const rays = [];
+const speed = 5;
+const numInitialRays = 100;
+const numStars = 50;
+
+var setup = function(){
+	fullScreenCanvas();
+	createInitialRays();
+};
+
+const createInitialRays = function(){
+	for (let i = 0; i < numInitialRays; i++) {
+		rays.push(createRay());
+	}
+};
+
+const createRay = function(){
+	const angle = randomDouble(0, TWO_PI);
+	const distance = randomDouble(500, 1500);
+	const color = randomBoolean() ? colors.white : '#4A90E2'; // white or blue
+	const thickness = randomDouble(1, 4);
+	const speed = randomDouble(3, 11);
+
+	return {
+		angle: angle,
+		distance: distance,
+		startDistance: distance,
+		color: color,
+		thickness: thickness,
+		speed: speed,
+		opacity: randomDouble(0.2, 1)
+	};
+};
+
+const drawStars = function(){
+	ctx.fillStyle = colors.white;
+	for (let i = 0; i < numStars; i++) {
+		const x = randomDouble(0, maxWidth);
+		const y = randomDouble(0, maxHeight);
+		const size = randomDouble(0, 2);
+		ctx.globalAlpha = randomDouble(0.2, 1);
+		ctx.fillRect(x, y, size, size);
+		// alpha(randomDouble(0.2, 1));
+		// rect(x, y, size, size);
+	}
+	// ctx.globalAlpha = 1.0;
+	// alpha(1);
+};
+
+const drawRays = function(){
+	const centerX = maxWidth / 2;
+	const centerY = maxHeight / 2;
+
+	for (let i = 0; i < rays.length; i++) {
+		const ray = rays[i];
+
+		// Calculate ray position
+		const x1 = centerX + cos(ray.angle) * ray.distance;
+		const y1 = centerY + sin(ray.angle) * ray.distance;
+		const x2 = centerX + cos(ray.angle) * (ray.distance + 50);
+		const y2 = centerY + sin(ray.angle) * (ray.distance + 50);
+
+		// Only draw rays that are visible on screen
+		if (ray.distance < max(maxWidth, maxHeight) * 0.7) {
+			ctx.strokeStyle = ray.color;
+			ctx.globalAlpha = ray.opacity * (ray.distance / ray.startDistance);
+			ctx.lineWidth = ray.thickness * (1 - ray.distance / ray.startDistance);
+			ctx.beginPath();
+			ctx.moveTo(x1, y1);
+			ctx.lineTo(x2, y2);
+			ctx.stroke();
+			// stroke(ray.color);
+			// alpha(ray.opacity * (ray.distance / ray.startDistance));
+			// strokeWeight(ray.thickness * (1 - ray.distance / ray.startDistance));
+			// line(x1, y1, x2, y2);
+		}
+
+		// Move ray toward viewer
+		ray.distance -= ray.speed;
+
+		// Reset ray if it gets too close
+		if (ray.distance < 0) {
+			rays[i] = createRay();
+		}
+	}
+};
+
+const drawGlow = function(){
+	const centerX = maxWidth / 2;
+	const centerY = maxHeight / 2;
+	ctx.globalAlpha = 1.0;
+	if (isFinite(centerX) && isFinite(centerY)) {
+		const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 100);
+		gradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+		gradient.addColorStop(0.5, 'rgba(74, 144, 226, 0.05)');
+		gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+		ctx.fillStyle = gradient;
+		ctx.fillRect(centerX - 100, centerY - 100, 200, 200);
+		// fill(gradient);
+		// rect(centerX - 100, centerY - 100, 200, 200);
+	}
+};
+
+var draw = function(){
+	background(colors.black);
+	drawRays();
+	drawGlow();
+	drawStars();
+};
+
+var mouseClicked = function(){
+	// Add more rays on click for dramatic effect
+	for (let i = 0; i < 20; i++) {
+		rays.push(createRay());
+	}
+
+	// Limit total rays to prevent performance issues
+	if (rays.length > 1000) {
+		rays.splice(0, rays.length - 1000);
+	}
+};
+
+window.onload = function(){
+	window.canvas = new Canvas(document.getElementById("canvas1"));
+	window.ctx = canvas.ctx;
+	canvas.setup = window.setup;
+	canvas.draw = window.draw;
+	canvas.run();
+};
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-42786295-1');
+</script>
+</body>
+</html>
