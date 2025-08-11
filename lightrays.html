@@ -41,15 +41,36 @@ body {
 const rays = [];
 const speed = 5;
 const numInitialRays = 100;
+const maxRays = 2000;
+const rayInterval = 10000;
+const updateColorsDelay = 30000;
 const numStars = 50;
+let useRandomColors = false;
 
 var setup = function(){
 	fullScreenCanvas();
-	createInitialRays();
+	createRays(numInitialRays);
+	createRaysInterval();
+	updateColorsTimeout();
 };
 
-const createInitialRays = function(){
-	for (let i = 0; i < numInitialRays; i++) {
+const createRaysInterval = function(){
+	setInterval(function(){
+		createRays(numInitialRays / 2);
+		if (rays.length > maxRays) {
+			rays.splice(0, rays.length - maxRays);
+		}
+	}, rayInterval);
+};
+
+const updateColorsTimeout = function(){
+	setTimeout(function(){
+		useRandomColors = true;
+	}, updateColorsDelay);
+};
+
+const createRays = function(num){
+	for (let i = 0; i < num; i++) {
 		rays.push(createRay());
 	}
 };
@@ -57,7 +78,7 @@ const createInitialRays = function(){
 const createRay = function(){
 	const angle = randomDouble(0, TWO_PI);
 	const distance = randomDouble(500, 1500);
-	const color = randomBoolean() ? colors.white : '#4A90E2'; // white or blue
+	const color = useRandomColors ? randomGoldenRatioColor() : (randomBoolean() ? colors.white : '#4A90E2'); // white or blue
 	const thickness = randomDouble(1, 4);
 	const speed = randomDouble(3, 11);
 
@@ -149,14 +170,9 @@ var draw = function(){
 };
 
 var mouseClicked = function(){
-	// Add more rays on click for dramatic effect
-	for (let i = 0; i < 20; i++) {
-		rays.push(createRay());
-	}
-
-	// Limit total rays to prevent performance issues
-	if (rays.length > 1000) {
-		rays.splice(0, rays.length - 1000);
+	createRays(20);
+	if (rays.length > maxRays) {
+		rays.splice(0, rays.length - maxRays);
 	}
 };
 
