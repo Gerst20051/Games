@@ -184,6 +184,106 @@ class Game {
         block2.type = tempType;
     }
 
+    getIndexFor(row, col) {
+        return row * this.board.grid.length + col;
+    }
+
+    getTypeAt(row, col) {
+        return this.board.blocks[this.getIndexFor(row, col)].type;
+    }
+
+    setTypeAt(row, col, type) {
+        this.board.blocks[this.getIndexFor(row, col)].type = type;
+    }
+
+    findMatches() {
+        const n = this.board.grid.length;
+        const matched = new Set();
+
+        // horizontal runs
+        for (let r = 0; r < n; r++) {
+            let currentType = this.getTypeAt(r, 0);
+            let runStart = 0;
+            let runLen = 1;
+            for (let c = 1; c < n; c++) {
+                const t = this.getTypeAt(r, c);
+                if (t === currentType) {
+                    runLen++;
+                } else {
+                    if (runLen >= 3) {
+                        for (let k = runStart; k < runStart + runLen; k++) {
+                            matched.add(this.getIndexFor(r, k));
+                        }
+                    }
+                    currentType = t;
+                    runStart = c;
+                    runLen = 1;
+                }
+            }
+            if (runLen >= 3) {
+                for (let k = runStart; k < runStart + runLen; k++) {
+                    matched.add(this.getIndexFor(r, k));
+                }
+            }
+        }
+
+        // vertical runs
+        for (let c = 0; c < n; c++) {
+            let currentType = this.getTypeAt(0, c);
+            let runStart = 0;
+            let runLen = 1;
+            for (let r = 1; r < n; r++) {
+                const t = this.getTypeAt(r, c);
+                if (t === currentType) {
+                    runLen++;
+                } else {
+                    if (runLen >= 3) {
+                        for (let k = runStart; k < runStart + runLen; k++) {
+                            matched.add(this.getIndexFor(k, c));
+                        }
+                    }
+                    currentType = t;
+                    runStart = r;
+                    runLen = 1;
+                }
+            }
+            if (runLen >= 3) {
+                for (let k = runStart; k < runStart + runLen; k++) {
+                    matched.add(this.getIndexFor(k, c));
+                }
+            }
+        }
+
+        return matched;
+    }
+
+    applyMatches(matched) {
+        const n = this.board.grid.length;
+
+        for (let c = 0; c < n; c++) {
+            const colTypes = [];
+            // collect non-matching types from bottom to top
+            for (let r = n - 1; r >= 0; r--) {
+                const idx = this.getIndexFor(r, c);
+                if (!matched.has(idx)) {
+                    colTypes.push(this.getTypeAt(r, c));
+                }
+            }
+
+            // write back non-matching types from bottom up
+            let writeRow = n - 1;
+            for (let i = 0; i < colTypes.length; i++) {
+                this.setTypeAt(writeRow, c, colTypes[i]);
+                writeRow--;
+            }
+
+            // fill remaining top cells with new random blocks
+            for (; writeRow >= 0; writeRow--) {
+                this.setTypeAt(writeRow, c, randomElement(Block.types));
+            }
+        }
+    }
+
     startDrag(x, y) {
         const block = this.getBlockAtPosition(x, y);
         if (block) {
@@ -212,6 +312,10 @@ class Game {
         ) {
             if (this.areBlocksAdjacent(this.dragState.startBlock, this.dragState.currentBlock)) {
                 this.swapBlocks(this.dragState.startBlock, this.dragState.currentBlock);
+                const matches = this.findMatches();
+                if (matches.size > 0) {
+                    this.applyMatches(matches);
+                }
             }
         }
 
@@ -307,6 +411,14 @@ var windowResized = function() {
 var orientationChanged = function() {
     windowResized();
 };
+
+// TODO: Missing Features
+// - loop detection to handle cascades
+// - revert swaps with no matches
+// - score calculation
+// - animation
+// - sound
+// - level progression
 </script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
 <script>
