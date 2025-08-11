@@ -718,8 +718,8 @@ var Ghost = function (ghostType) {
 		if (this.active && !levelWon && !gameOver) {
 			if (this.frightened) {
 				if (this.timeToBeFrightenedInSeconds < diff(this.frightenedTimeInSeconds, timeSeconds())) {
-					this.frightened = false;
-					this.frightenedTimeInSeconds = 0;
+					this.unfrighten();
+					this.reverseDir();
 				}
 			}
 
@@ -941,6 +941,11 @@ var Ghost = function (ghostType) {
 	this.frighten = function () {
 		this.frightened = true;
 		this.frightenedTimeInSeconds = timeSeconds();
+	};
+
+	this.unfrighten = function () {
+		this.frightened = false;
+		this.frightenedTimeInSeconds = 0;
 	};
 
 	this.isFrightened = function () {
@@ -1361,7 +1366,8 @@ function checkFood() {
 function frightenGhosts() {
 	var ghosts = getGameObjectsOfType(GHOST);
 	ghosts.forEach(function (ghost) {
-		ghost.frighten();
+        ghost.frighten();
+		ghost.reverseDir();
 	});
 }
 
