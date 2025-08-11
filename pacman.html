@@ -518,6 +518,11 @@ function MovableGameObject() {
 	this.setNextDir = function (newNextDir) {
 		this.nextDir = newNextDir;
 	};
+
+	this.reverseDir = function () {
+		this.dir = -this.dir;
+		this.prevDir = this.dir;
+	};
 }
 
 var Pacman = function () {
@@ -800,7 +805,7 @@ var Ghost = function (ghostType) {
 		possibleDirections = possibleDirections.filter(function (dir) {
 			var idx = directionLookup[dir];
 			var targetType = nearBlockTypes[idx];
-			if (targetType === WALL) return false;
+			if (targetType === WALL || targetType === PORT) return false;
 			if (targetType === DOOR && (!this.released || this.hasExitedCage)) return false;
 			if (targetType === CAGE && (this.hasExitedCage || currentTileType !== CAGE)) return false;
 			return true;
@@ -863,14 +868,21 @@ var Ghost = function (ghostType) {
 			};
 			var currentDirectionIndex = directionLookup[this.dir];
 			if (-1 < currentDirectionIndex) {
-				if (
+			if (
 					nearBlockTypes[currentDirectionIndex] === WALL ||
 					// treat door as closed until released; and always closed once exited
 					(nearBlockTypes[currentDirectionIndex] === DOOR && (!this.released || this.hasExitedCage)) ||
 					// never allow moving from outside into cage; inside the cage during exit is allowed
-					(nearBlockTypes[currentDirectionIndex] === CAGE && (this.hasExitedCage || currentTileType !== CAGE))
+				(nearBlockTypes[currentDirectionIndex] === CAGE && (this.hasExitedCage || currentTileType !== CAGE)) ||
+				// ghosts cannot traverse ports; reverse
+				(nearBlockTypes[currentDirectionIndex] === PORT)
 				) {
+				// reverse direction at ports or obstacles
+				if (nearBlockTypes[currentDirectionIndex] === PORT && this.prevDir && this.prevDir !== NO_DIRECTION) {
+					this.reverseDir();
+				} else {
 					this.dir = NO_DIRECTION;
+				}
 					this.moveToCenterOfCurrentBlock();
 					return;
 				}
