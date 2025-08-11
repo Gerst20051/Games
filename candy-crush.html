@@ -105,7 +105,7 @@ class Block {
 
 class Board {
     numberOfBlockTypes = 4;
-    blockTypes = shuffle(Block.types).slice(0, this.numberOfBlockTypes);
+    blockTypes = [];
     blocks = [];
     gridIndex = 2;
 
@@ -130,6 +130,7 @@ class Board {
 
     buildBlocks() {
         this.blocks = [];
+        this.blockTypes = shuffle(Block.types).slice(0, this.numberOfBlockTypes);
         const numberOfBlocks = this.grid.length * this.grid.length;
         for (let i = 0; i < numberOfBlocks; i++) {
             this.blocks.push(new Block(this, i, randomElement(this.blockTypes)));
@@ -150,6 +151,8 @@ class Game {
             currentBlock: null,
             dragOffset: { x: 0, y: 0 }
         };
+        this.matchCount = 0;
+        this.matchCountThreshold = 25;
     }
 
     getBlockAtPosition(x, y) {
@@ -282,7 +285,7 @@ class Game {
 
             // fill remaining top cells with new random blocks
             for (; writeRow >= 0; writeRow--) {
-                this.setTypeAt(writeRow, c, randomElement(Block.types));
+                this.setTypeAt(writeRow, c, randomElement(this.board.blockTypes));
             }
         }
     }
@@ -320,6 +323,7 @@ class Game {
                     this.swapBlocks(this.dragState.startBlock, this.dragState.currentBlock);
                 } else {
                     while (matches.size > 0) {
+                        this.matchCount++;
                         this.applyMatches(matches);
                         matches = this.findMatches();
                     }
@@ -333,6 +337,11 @@ class Game {
             currentBlock: null,
             dragOffset: { x: 0, y: 0 }
         };
+
+        if (this.matchCount >= this.matchCountThreshold) {
+            this.matchCount = 0;
+            this.board.buildBlocks();
+        }
     }
 
     draw() {
