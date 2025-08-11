@@ -46,6 +46,7 @@ const rayInterval = 10000;
 const updateColorsDelay = 30000;
 const numStars = 50;
 let useRandomColors = false;
+let reverseDirection = false;
 
 var setup = function(){
 	fullScreenCanvas();
@@ -77,7 +78,7 @@ const createRays = function(num){
 
 const createRay = function(){
 	const angle = randomDouble(0, TWO_PI);
-	const distance = randomDouble(500, 1500);
+	const distance = reverseDirection ? randomDouble(0, 100) : randomDouble(500, 1500);
 	const color = useRandomColors ? randomGoldenRatioColor() : (randomBoolean() ? colors.white : '#4A90E2'); // white or blue
 	const thickness = randomDouble(1, 4);
 	const speed = randomDouble(3, 11);
@@ -89,7 +90,8 @@ const createRay = function(){
 		color: color,
 		thickness: thickness,
 		speed: speed,
-		opacity: randomDouble(0.2, 1)
+		opacity: randomDouble(0.2, 1),
+		reverse: reverseDirection
 	};
 };
 
@@ -122,26 +124,51 @@ const drawRays = function(){
 		const y2 = centerY + sin(ray.angle) * (ray.distance + 50);
 
 		// Only draw rays that are visible on screen
-		if (ray.distance < max(maxWidth, maxHeight) * 0.7) {
+		const maxDistance = max(maxWidth, maxHeight);
+		const drawDistance = maxDistance * 0.7;
+		const shouldDraw = ray.distance < drawDistance;
+
+		if (shouldDraw) {
+			// Calculate opacity and thickness based on direction
+			let opacityFactor, thicknessFactor;
+			if (ray.reverse) {
+				// For outward rays: start thick/opaque at center, fade as they move out
+				opacityFactor = ray.opacity * (ray.distance / drawDistance);
+				thicknessFactor = ray.thickness * (1 - ray.distance / drawDistance);
+			} else {
+				// For inward rays: start thin/faded far away, get thick/opaque as they approach
+				opacityFactor = ray.opacity * (ray.distance / ray.startDistance);
+				thicknessFactor = ray.thickness * (1 - ray.distance / ray.startDistance);
+			}
+
 			ctx.strokeStyle = ray.color;
-			ctx.globalAlpha = ray.opacity * (ray.distance / ray.startDistance);
-			ctx.lineWidth = ray.thickness * (1 - ray.distance / ray.startDistance);
+			ctx.globalAlpha = Math.max(0, opacityFactor);
+			ctx.lineWidth = Math.max(0.1, thicknessFactor);
+
 			ctx.beginPath();
 			ctx.moveTo(x1, y1);
 			ctx.lineTo(x2, y2);
 			ctx.stroke();
+
 			// stroke(ray.color);
-			// alpha(ray.opacity * (ray.distance / ray.startDistance));
-			// strokeWeight(ray.thickness * (1 - ray.distance / ray.startDistance));
+			// alpha(opacityFactor);
+			// strokeWeight(thicknessFactor);
 			// line(x1, y1, x2, y2);
 		}
 
-		// Move ray toward viewer
-		ray.distance -= ray.speed;
-
-		// Reset ray if it gets too close
-		if (ray.distance < 0) {
-			rays[i] = createRay();
+		// Move ray based on direction
+		if (ray.reverse) {
+			ray.distance += ray.speed; // Move outward from center
+			// Reset ray if it gets too far
+			if (ray.distance > maxDistance * 0.7) {
+				rays[i] = createRay();
+			}
+		} else {
+			ray.distance -= ray.speed; // Move toward viewer
+			// Reset ray if it gets too close
+			if (ray.distance < 0) {
+				rays[i] = createRay();
+			}
 		}
 	}
 };
@@ -162,6 +189,13 @@ const drawGlow = function(){
 	}
 };
 
+const changeDirection = function(){
+	reverseDirection = !reverseDirection;
+	for (let i = 0; i < rays.length; i++) {
+		rays[i].reverse = reverseDirection;
+	}
+};
+
 var draw = function(){
 	background(colors.black);
 	drawRays();
@@ -170,9 +204,13 @@ var draw = function(){
 };
 
 var mouseClicked = function(){
-	createRays(20);
-	if (rays.length > maxRays) {
-		rays.splice(0, rays.length - maxRays);
+	changeDirection();
+};
+
+var keyUp = function(e){
+	// press 'r' to reverse direction!
+	if (keycode.getKeyCode(e) === keys.R) {
+		changeDirection();
 	}
 };
 

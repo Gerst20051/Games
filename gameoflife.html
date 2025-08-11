@@ -93,7 +93,6 @@ var livesOn = function (x, y){
 					numNeighbors += 1;
 				}
 			}
-			
 		}
 	}
 	// if the cell is living and has 2 or 3 live neighbors...
@@ -174,7 +173,7 @@ var mouseDragged = function(){
 
 var keyPressed = function(){
 	// press 'p' to pause!
-	if (keyCode === 80) {
+	if (keyCode === keys.P) {
 		paused = !paused;
 	}
 };
