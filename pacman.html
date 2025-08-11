@@ -1063,6 +1063,10 @@ var Scene = function () {
 	this.init = function () {
 		this.configurePrototypes();
 
+		// reset transient state between levels/restarts
+		pendingGhostRespawns = [];
+		eatenGhosts = 0;
+
 		gameObjects = [];
 		gameObjects.push(new GameBackground());
 		gameObjects.push(new GameLevel());
