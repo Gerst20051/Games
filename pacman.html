@@ -1390,6 +1390,23 @@ window.onload = function () {
 	canvas.draw = window.draw;
 	canvas.run();
 };
+
+// TODO: Missing Features
+// Scatter/Chase modes: No global mode timer or timed reversals between scatter/chase; only frightened is implemented.
+// Ghost personalities and targeting: No Blinky/Pinky/Inky/Clyde behaviors or tile targeting; movement is random with periodic changes.
+// Pathfinding at intersections: No deterministic turn rules or shortest-path logic; no “no-reverse except on mode change” rule.
+// Dot-counter releases: Pen exits aren’t tied to pellet counters; classic uses per-ghost dot counters plus timing.
+// Eyes return to house: Eaten ghosts are despawned and respawned; classic has eyes travel back, pass the door, pause, then respawn.
+// Frightened specifics: No blue-to-white flashing near the end; chain-score increments (200/400/800/1600) not tracked/displayed.
+// Scoring and UI: No points for pellets, energizers, fruit, ghosts; no high score; no on-screen score popups; no extra life at 10,000.
+// Fruit system: No fruit spawns at dot thresholds, fruit types per level, fruit scoring, or fruit path/sprite.
+// Level progression: Speeds, frightened duration, and behavior don’t change by level; no intermission cutscenes.
+// Maze accuracy and pellets: Layout only approximates level 1; not the exact 240 pellets + 4 energizers; pellets are auto-generated on PATH.
+// Movement polish: No early-turn buffer/cornering rules; turning physics and tunnel slowdowns aren’t modeled.
+// Tunnel behavior: Pac-Man teleports, ghosts avoid ports (intentional deviation); classic lets ghosts use tunnels at reduced speed.
+// Death/lives flow: No death animation; life decrement resets the whole scene rather than preserving eaten dots per life.
+// Audio: Sounds exist but aren’t wired for waka-waka loop, frightened, ghost eaten, fruit, extend, etc.
+// 2-player/attract mode: Not implemented.
 </script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
 <script>
