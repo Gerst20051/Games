@@ -1,0 +1,325 @@
+<!--
+ ::::::::  :::::::::  ::::::::::     ::: ::::::::::: :::::::::: :::::::::       :::::::::  :::   :::                               
+:+:    :+: :+:    :+: :+:          :+: :+:   :+:     :+:        :+:    :+:      :+:    :+: :+:   :+: :+:                           
++:+        +:+    +:+ +:+         +:+   +:+  +:+     +:+        +:+    +:+      +:+    +:+  +:+ +:+                                
++#+        +#++:++#:  +#++:++#   +#++:++#++: +#+     +#++:++#   +#+    +:+      +#++:++#+    +#++:                                 
++#+        +#+    +#+ +#+        +#+     +#+ +#+     +#+        +#+    +#+      +#+    +#+    +#+                                  
+#+#    #+# #+#    #+# #+#        #+#     #+# #+#     #+#        #+#    #+#      #+#    #+#    #+#    #+#                           
+ ########  ###    ### ########## ###     ### ###     ########## #########       #########     ###                                  
+                                                                                                                                   
+                                                                                                                                   
+                                                                                                                                   
+    :::     ::::    ::: :::::::::  :::::::::  :::::::::: :::       :::       ::::::::  :::::::::: :::::::::   :::::::: ::::::::::: 
+  :+: :+:   :+:+:   :+: :+:    :+: :+:    :+: :+:        :+:       :+:      :+:    :+: :+:        :+:    :+: :+:    :+:    :+:     
+ +:+   +:+  :+:+:+  +:+ +:+    +:+ +:+    +:+ +:+        +:+       +:+      +:+        +:+        +:+    +:+ +:+           +:+     
++#++:++#++: +#+ +:+ +#+ +#+    +:+ +#++:++#:  +#++:++#   +#+  +:+  +#+      :#:        +#++:++#   +#++:++#:  +#++:++#++    +#+     
++#+     +#+ +#+  +#+#+# +#+    +#+ +#+    +#+ +#+        +#+ +#+#+ +#+      +#+   +#+# +#+        +#+    +#+        +#+    +#+     
+#+#     #+# #+#   #+#+# #+#    #+# #+#    #+# #+#         #+#+# #+#+#       #+#    #+# #+#        #+#    #+# #+#    #+#    #+#     
+###     ### ###    #### #########  ###    ### ##########   ###   ###         ########  ########## ###    ###  ########     ###     
+-->
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Frogger (via Canvas Engine)</title>
+<script src="canvasengine.js"></script>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#canvaspane {
+    cursor: default;
+}
+</style>
+</head>
+<body>
+<div id="content">
+<div id="canvaspane">
+<canvas id="canvas1" width="100" height="100"></canvas>
+</div>
+</div>
+<script>
+const GRID_SIZE = 50; // pixel size per grid cell
+const CANVAS_WIDTH = 12 * GRID_SIZE; // 600px
+const CANVAS_HEIGHT = 16 * GRID_SIZE; // 800px
+const ROAD_LANES = 5; // number of road lanes
+const RIVER_LANES = 5; // number of river lanes
+const DIRECTIONS = { UP: [0, -1], DOWN: [0, 1], LEFT: [-1, 0], RIGHT: [1, 0] };
+
+class Entity {
+    constructor(x, y, width, height, color) {
+        this.x = x * GRID_SIZE;
+        this.y = y * GRID_SIZE;
+        this.width = width || GRID_SIZE;
+        this.height = height || GRID_SIZE;
+        this.color = color || 'green';
+    }
+
+    update(dt) {}
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+class Frog extends Entity {
+    constructor() {
+        super(6, 15, GRID_SIZE, GRID_SIZE, 'lime');
+        this.lives = 3;
+        this.onLog = false;
+    }
+
+    move(direction) {
+        const [dx, dy] = DIRECTIONS[direction];
+        this.x += dx * GRID_SIZE;
+        this.y += dy * GRID_SIZE;
+        this.x = Math.max(0, Math.min(this.x, CANVAS_WIDTH - GRID_SIZE));
+        this.y = Math.max(0, Math.min(this.y, CANVAS_HEIGHT - GRID_SIZE));
+    }
+
+    update(dt, logs) {
+        if (this.onLog) {
+            const log = this.getAttachedLog(logs);
+            if (log) this.x += log.speed * dt;
+            else this.die();
+        }
+    }
+
+    getAttachedLog(logs) {
+        return logs.find(log => this.collidesWith(log));
+    }
+
+    collidesWith(other) {
+        return this.x < other.x + other.width &&
+               this.x + this.width > other.x &&
+               this.y < other.y + other.height &&
+               this.y + this.height > other.y;
+    }
+
+    die() {
+        this.lives--;
+        this.resetPosition();
+    }
+
+    resetPosition() {
+        this.x = 6 * GRID_SIZE;
+        this.y = 15 * GRID_SIZE;
+    }
+}
+
+class Vehicle extends Entity {
+    constructor(x, y, width, speed, color) {
+        super(x, y, width, GRID_SIZE, color);
+        this.speed = speed; // positive for right, negative for left
+    }
+
+    update(dt) {
+        this.x += this.speed * dt;
+        if (this.speed > 0 && this.x > CANVAS_WIDTH) this.x = -this.width;
+        if (this.speed < 0 && this.x < -this.width) this.x = CANVAS_WIDTH;
+    }
+}
+
+class Log extends Entity {
+    constructor(x, y, width, speed, color = 'brown') {
+        super(x, y, width, GRID_SIZE, color);
+        this.speed = speed;
+    }
+
+    update(dt) {
+        this.x += this.speed * dt;
+        if (this.speed > 0 && this.x > CANVAS_WIDTH) this.x = -this.width;
+        if (this.speed < 0 && this.x < -this.width) this.x = CANVAS_WIDTH;
+    }
+}
+
+class Goal extends Entity {
+    constructor(x, y) {
+        super(x, y, GRID_SIZE, GRID_SIZE, 'blue');
+        this.occupied = false;
+    }
+}
+
+class Game {
+    constructor() {
+        this.restart();
+        this.lastTime = 0;
+
+        document.addEventListener('keydown', this.handleInput.bind(this));
+    }
+
+    restart() {
+        this.state = 'playing'; // 'playing', 'paused', 'gameover'
+        this.score = 0;
+        this.level = 1;
+        this.frog = new Frog();
+        this.vehicles = this.createVehicles();
+        this.logs = this.createLogs();
+        this.goals = this.createGoals();
+    }
+
+    createVehicles() {
+        return [
+            new Vehicle(0, 6, GRID_SIZE * 2, 100, 'red'), // truck in lane 6
+            new Vehicle(0, 7, GRID_SIZE * 2, 100, 'red'), // truck in lane 7
+            new Vehicle(0, 8, GRID_SIZE * 2, 100, 'red'), // truck in lane 8
+            new Vehicle(0, 9, GRID_SIZE * 2, 100, 'red'), // truck in lane 9
+            new Vehicle(0, 10, GRID_SIZE * 2, 100, 'red'), // truck in lane 10
+        ];
+    }
+
+    createLogs() {
+        return [
+            new Log(0, 1, GRID_SIZE * 3, 50), // log in river lane 1
+            new Log(0, 2, GRID_SIZE * 3, 50), // log in river lane 2
+            new Log(0, 3, GRID_SIZE * 3, 50), // log in river lane 3
+            new Log(0, 4, GRID_SIZE * 3, 50), // log in river lane 4
+            new Log(0, 5, GRID_SIZE * 3, 50), // log in river lane 5
+        ];
+    }
+
+    createGoals() {
+        const numGoals = 5;
+        return Array.from({ length: numGoals }, (_, i) => new Goal(1 + i * 2, 0));
+    }
+
+    handleInput(e) {
+        if (this.state === 'playing') {
+            const keyMap = { ArrowUp: 'UP', ArrowDown: 'DOWN', ArrowLeft: 'LEFT', ArrowRight: 'RIGHT' };
+            const dir = keyMap[e.key];
+            if (dir) this.frog.move(dir);
+        } else if (this.state === 'gameover' && e.key === 'r' || e.key === 'R') {
+            this.restart();
+        }
+    }
+
+    update(dt) {
+        if (this.state !== 'playing') return;
+
+        this.frog.update(dt, this.logs);
+        this.vehicles.forEach(v => v.update(dt));
+        this.logs.forEach(l => l.update(dt));
+
+        this.checkRoadCollisions();
+        this.checkRiverCollisions();
+        this.checkGoal();
+
+        if (this.allGoalsOccupied()) this.nextLevel();
+    }
+
+    checkRoadCollisions() {
+        if (this.vehicles.some(v => this.frog.collidesWith(v))) this.frog.die();
+    }
+
+    checkRiverCollisions() {
+        const inRiver = this.frog.y / GRID_SIZE <= RIVER_LANES;
+        if (inRiver) {
+            this.frog.onLog = this.logs.some(l => this.frog.collidesWith(l));
+            if (!this.frog.onLog) this.frog.die();
+        } else {
+            this.frog.onLog = false;
+        }
+    }
+
+    checkGoal() {
+        const goal = this.goals.find(g => !g.occupied && this.frog.collidesWith(g));
+        if (goal) {
+            goal.occupied = true;
+            this.score += 50;
+            this.frog.resetPosition();
+        }
+    }
+
+    allGoalsOccupied() {
+        return this.goals.every(g => g.occupied);
+    }
+
+    nextLevel() {
+        this.level++;
+        this.score += 1000;
+        this.resetGoals();
+        this.vehicles.forEach(v => v.speed *= 1.1);
+        this.logs.forEach(l => l.speed *= 1.1);
+    }
+
+    resetGoals() {
+        this.goals.forEach(g => g.occupied = false);
+    }
+
+    draw() {
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(0, (ROAD_LANES + 1) * GRID_SIZE, CANVAS_WIDTH, ROAD_LANES * GRID_SIZE);
+
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(0, GRID_SIZE, CANVAS_WIDTH, RIVER_LANES * GRID_SIZE);
+
+        this.vehicles.forEach(v => v.draw());
+        this.logs.forEach(l => l.draw());
+        this.goals.forEach(g => g.draw());
+        this.frog.draw();
+
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Score: ${this.score} Lives: ${this.frog.lives} Level: ${this.level}`, 10, CANVAS_HEIGHT - 10);
+
+        if (this.state === 'gameover') {
+            ctx.fillText('Game Over! Press R to Restart', CANVAS_WIDTH / 2 - 150, CANVAS_HEIGHT / 2);
+        }
+    }
+
+    loop(timestamp) {
+        // delta time for frame-independent movement
+        const dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+
+        this.update(dt);
+        this.draw();
+
+        if (this.frog.lives <= 0) this.state = 'gameover';
+    }
+}
+
+const game = new Game();
+
+var setup = function(){
+    size(CANVAS_WIDTH, CANVAS_HEIGHT);
+};
+
+var draw = function(){
+    game.loop(Date.now());
+};
+
+// var keyDown = function () {
+//     if (keyCodeList[keys.R] === true) {
+//         game.restart();
+//         return;
+//     }
+// };
+
+window.onload = function(){
+    window.canvas = new Canvas(document.getElementById("canvas1"));
+    window.ctx = canvas.ctx;
+    canvas.setup = window.setup;
+    canvas.draw = window.draw;
+    canvas.run();
+};
+
+// TODO: Future Enhancements
+// Performance: Use delta time (dt) for consistent speed across devices.
+// Assets: Replace fillRect with drawImage.
+// Sound: Add AudioContext for jumps, splats, etc.
+// Levels: Dynamically generate more/faster obstacles as levels increase.
+// Mobile: Add touch controls via event listeners.
+// Edge Cases: Handle frog going off-screen, time limits per level, bonus items.
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-42786295-1"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'UA-42786295-1');
+</script>
+</body>
+</html>
