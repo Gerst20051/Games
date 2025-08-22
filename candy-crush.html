@@ -67,6 +67,25 @@ const grids = [
     ],
 ];
 
+function generatePointsFromLine(startPoint, endPoint, gap) {
+    if (!startPoint || !endPoint) return [];
+    gap = gap || 1;
+    const lineSlope = clamp(slope(startPoint.x, startPoint.y, endPoint.x, endPoint.y), -gap, gap);
+    const points = [startPoint];
+    const lineDistance = dist(startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+    const numberPoints = lineDistance / gap;
+    const invert = startPoint.x < endPoint.x ? 1 : -1;
+    for (let i = 0; i < numberPoints; i++) {
+        const lastPoint = last(points);
+        points.push({
+            x: lastPoint.x + (gap * invert),
+            y: lastPoint.y + (gap * lineSlope * invert),
+        });
+    }
+    points.push(endPoint);
+    return points;
+}
+
 class Block {
     static types = [
         'images/emeralds/amethyst.png',
@@ -133,7 +152,40 @@ class Board {
         }
     }
 
+    calculateMousePath() {
+        const startPoint = first(activeMousePath);
+        const endPoint = last(activeMousePath);
+        const pointGap = this.blockDimensions / 2;
+        this.mousePath = generatePointsFromLine(startPoint, endPoint, pointGap);
+        // if (this.mousePath.length > 2) {
+        //     console.log('activeMousePath', activeMousePath);
+        //     console.log('this.mousePath', this.mousePath);
+        //     // this.activeBlockIndexes = [];
+        //     // this.mousePath.forEach(point => {
+        //     //     const blockIndex = this.getBlockIndexFromCoordinates(point.x - this.leftMargin, point.y - this.topMargin);
+        //     //     // console.log('blockIndex', blockIndex);
+        //     //     this.activeBlockIndexes.push(blockIndex);
+        //     // });
+        // }
+    }
+
+    detectBlocksToSwap() {
+        let startingBlock = null;
+        let endingBlock = null;
+        if (this.mousePath.length > 2) {
+            for (let i = 0; i < this.mousePath.length; i++) {
+
+            }
+        }
+    }
+
+    run() {
+        this.calculateMousePath();
+        this.detectBlocksToSwap();
+    }
+
     draw() {
+        this.run();
         this.blocks.forEach(block => block.draw());
     }
 }
@@ -166,10 +218,24 @@ window.onload = function() {
     canvas.run();
 };
 
-var windowResized = function() {
+var mouseMoved = function() {
+    if (mouseIsPressed) {
+        activeMousePath.push({ x: mouseX, y: mouseY });
+    }
+};
+
+// TODO: add debounce
+// var mouseMoved = debounce(function() {
+//     console.log('mouseMoved');
+//     if (mouseIsPressed) {
+//         activeMousePath.push({ x: mouseX, y: mouseY });
+//     }
+// }, 500);
+
+var windowResized = debounce(function() {
     window.game.board.calculateDimensions();
     window.game.board.blocks.forEach(block => block.computeCoordinates());
-};
+}, 500);
 
 var orientationChanged = function() {
     windowResized();
